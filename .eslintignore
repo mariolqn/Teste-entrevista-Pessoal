@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Cache & temp
+.turbo/
+.cache/
+.temp/
+tmp/
+
+# Test & coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Database
+prisma/migrations/
+
+# Generated
+*.generated.*
+*.min.js
+*.min.css
+
+# Config files
+*.config.js
+*.config.mjs
+*.config.cjs
+vite.config.ts
+vitest.config.ts
+playwright.config.ts
+
+# Other
+public/
+docs/
