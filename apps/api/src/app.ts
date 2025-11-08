@@ -3,7 +3,7 @@
  * Configures all middleware, plugins, and routes
  */
 
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -23,8 +23,8 @@ import { chartRoutes } from './routes/chart.routes';
  */
 export async function buildApp(): Promise<FastifyInstance> {
   // Create Fastify instance
-  const app = Fastify({
-    logger,
+  const fastifyOptions: FastifyServerOptions = {
+    logger: logger as any,
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'requestId',
     disableRequestLogging: false,
@@ -37,11 +37,13 @@ export async function buildApp(): Promise<FastifyInstance> {
         allErrors: true,
       },
     },
-  });
+  };
+
+  const app = Fastify(fastifyOptions);
 
   // Register error handlers
-  app.setErrorHandler(errorHandler);
-  app.setNotFoundHandler(notFoundHandler);
+  app.setErrorHandler(errorHandler as any);
+  app.setNotFoundHandler(notFoundHandler as any);
 
   // Register core plugins
   await app.register(sensible);
@@ -81,7 +83,6 @@ export async function buildApp(): Promise<FastifyInstance> {
       cache: 10000,
       allowList: ['127.0.0.1', '::1'], // Whitelist localhost
       redis: config.featureCacheEnabled ? (await import('./lib/redis')).redis : undefined,
-      skipSuccessfulRequests: false,
       keyGenerator: (request) => {
         return request.ip + ':' + request.routerPath;
       },

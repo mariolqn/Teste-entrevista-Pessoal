@@ -29,9 +29,13 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.title = title;
-    this.detail = detail;
+    if (detail !== undefined) {
+      this.detail = detail;
+    }
     this.type = type || `https://api.dashboard.com/errors/${this.constructor.name}`;
-    this.errors = errors;
+    if (errors !== undefined) {
+      this.errors = errors;
+    }
     Error.captureStackTrace(this, this.constructor);
   }
 

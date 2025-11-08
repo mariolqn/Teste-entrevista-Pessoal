@@ -39,24 +39,23 @@ export class LineChartStrategy extends BaseChartStrategy {
       new Date(end + 'T23:59:59.999Z'),
     ];
 
-    if (dimensionFilters.categoryId) {
+    if (dimensionFilters['categoryId']) {
       whereConditions.push('category_id = ?');
-      whereParams.push(dimensionFilters.categoryId);
+      whereParams.push(dimensionFilters['categoryId']);
     }
 
-    if (dimensionFilters.productId) {
+    if (dimensionFilters['productId']) {
       whereConditions.push('product_id = ?');
-      whereParams.push(dimensionFilters.productId);
+      whereParams.push(dimensionFilters['productId']);
     }
 
-    if (dimensionFilters.customerId) {
+    if (dimensionFilters['customerId']) {
       whereConditions.push('customer_id = ?');
-      whereParams.push(dimensionFilters.customerId);
+      whereParams.push(dimensionFilters['customerId']);
     }
 
     // Handle groupBy for different dimensions
     let query: string;
-    let groupByColumn: string;
 
     if (['day', 'week', 'month', 'quarter', 'year'].includes(groupBy)) {
       // Time-based grouping with separate series for revenue/expense
@@ -70,7 +69,6 @@ export class LineChartStrategy extends BaseChartStrategy {
         GROUP BY period, type
         ORDER BY period ASC, type ASC
       `;
-      groupByColumn = 'period';
     } else {
       // Dimension-based grouping (category, product, etc.)
       const dimensionTable = this.getDimensionTable(groupBy);
@@ -87,7 +85,6 @@ export class LineChartStrategy extends BaseChartStrategy {
         GROUP BY period, series_name
         ORDER BY period ASC, series_name ASC
       `;
-      groupByColumn = 'period';
     }
 
     // Execute query

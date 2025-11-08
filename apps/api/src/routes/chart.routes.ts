@@ -13,7 +13,7 @@ import prisma from '../lib/prisma.js';
  */
 export async function chartRoutes(
   fastify: FastifyInstance,
-  options: FastifyPluginOptions,
+  _options: FastifyPluginOptions,
 ) {
   // Initialize services and controllers
   const chartService = new ChartService(prisma);

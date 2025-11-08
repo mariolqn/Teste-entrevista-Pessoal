@@ -187,6 +187,7 @@ export function isLineChartResponse(
 ): response is LineChartResponse {
   return 'series' in response && Array.isArray(response.series)
     && response.series.length > 0
+    && response.series[0] !== undefined
     && 'points' in response.series[0];
 }
 
@@ -195,6 +196,7 @@ export function isPieChartResponse(
 ): response is PieChartResponse {
   return 'series' in response && Array.isArray(response.series)
     && response.series.length > 0
+    && response.series[0] !== undefined
     && 'percentage' in response.series[0];
 }
 

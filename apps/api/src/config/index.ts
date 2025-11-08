@@ -59,49 +59,49 @@ const configSchema = z.object({
 const parseConfig = () => {
   const env = {
     // Environment
-    env: process.env.NODE_ENV,
+    env: process.env['NODE_ENV'],
     
     // Server
-    port: process.env.PORT,
-    host: process.env.API_HOST,
-    apiPrefix: process.env.API_PREFIX,
+    port: process.env['PORT'],
+    host: process.env['API_HOST'],
+    apiPrefix: process.env['API_PREFIX'],
     
     // Database
-    databaseUrl: process.env.DATABASE_URL,
-    databasePoolMin: process.env.DATABASE_POOL_MIN,
-    databasePoolMax: process.env.DATABASE_POOL_MAX,
+    databaseUrl: process.env['DATABASE_URL'],
+    databasePoolMin: process.env['DATABASE_POOL_MIN'],
+    databasePoolMax: process.env['DATABASE_POOL_MAX'],
     
     // Redis
-    redisUrl: process.env.REDIS_URL,
-    redisTtl: process.env.REDIS_TTL,
+    redisUrl: process.env['REDIS_URL'],
+    redisTtl: process.env['REDIS_TTL'],
     
     // CORS
-    corsOrigin: process.env.CORS_ORIGIN?.includes(',') 
-      ? process.env.CORS_ORIGIN.split(',') 
-      : process.env.CORS_ORIGIN,
-    corsCredentials: process.env.CORS_CREDENTIALS,
+    corsOrigin: process.env['CORS_ORIGIN']?.includes(',') 
+      ? process.env['CORS_ORIGIN'].split(',') 
+      : process.env['CORS_ORIGIN'],
+    corsCredentials: process.env['CORS_CREDENTIALS'],
     
     // Rate Limiting
-    rateLimitMax: process.env.RATE_LIMIT_MAX,
-    rateLimitWindow: process.env.RATE_LIMIT_WINDOW,
+    rateLimitMax: process.env['RATE_LIMIT_MAX'],
+    rateLimitWindow: process.env['RATE_LIMIT_WINDOW'],
     
     // Logging
-    logLevel: process.env.LOG_LEVEL,
-    logPretty: process.env.LOG_PRETTY,
+    logLevel: process.env['LOG_LEVEL'],
+    logPretty: process.env['LOG_PRETTY'],
     
     // Security
-    jwtSecret: process.env.JWT_SECRET,
-    bcryptRounds: process.env.BCRYPT_ROUNDS,
+    jwtSecret: process.env['JWT_SECRET'],
+    bcryptRounds: process.env['BCRYPT_ROUNDS'],
     
     // Feature Flags
-    featureCacheEnabled: process.env.FEATURE_CACHE_ENABLED,
-    featureRateLimitEnabled: process.env.FEATURE_RATE_LIMIT_ENABLED,
-    featureSwaggerEnabled: process.env.FEATURE_SWAGGER_ENABLED,
+    featureCacheEnabled: process.env['FEATURE_CACHE_ENABLED'],
+    featureRateLimitEnabled: process.env['FEATURE_RATE_LIMIT_ENABLED'],
+    featureSwaggerEnabled: process.env['FEATURE_SWAGGER_ENABLED'],
     
     // Monitoring
-    sentryDsn: process.env.SENTRY_DSN,
-    newRelicLicenseKey: process.env.NEW_RELIC_LICENSE_KEY,
-    datadogApiKey: process.env.DATADOG_API_KEY,
+    sentryDsn: process.env['SENTRY_DSN'],
+    newRelicLicenseKey: process.env['NEW_RELIC_LICENSE_KEY'],
+    datadogApiKey: process.env['DATADOG_API_KEY'],
   };
   
   const result = configSchema.safeParse(env);

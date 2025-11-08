@@ -108,13 +108,18 @@ export class TableChartStrategy extends BaseChartStrategy {
       ? this.encodeCursor({ skip: skip + limit })
       : undefined;
 
-    return {
+    const response: TableChartResponse = {
       columns,
       rows,
-      cursor: nextCursor,
       hasMore,
       total: totalCount,
     };
+    
+    if (nextCursor !== undefined) {
+      response.cursor = nextCursor;
+    }
+    
+    return response;
   }
 
   /**
@@ -190,9 +195,9 @@ export class TableChartStrategy extends BaseChartStrategy {
       dateFilter.lte as Date,
     ];
 
-    if (dimensionFilters.categoryId) {
+    if (dimensionFilters['categoryId']) {
       whereConditions.push('category_id = ?');
-      whereParams.push(dimensionFilters.categoryId);
+      whereParams.push(dimensionFilters['categoryId']);
     }
 
     const query = `
@@ -276,9 +281,9 @@ export class TableChartStrategy extends BaseChartStrategy {
       dateFilter.lte as Date,
     ];
 
-    if (dimensionFilters.productId) {
+    if (dimensionFilters['productId']) {
       whereConditions.push('product_id = ?');
-      whereParams.push(dimensionFilters.productId);
+      whereParams.push(dimensionFilters['productId']);
     }
 
     const query = `
@@ -353,9 +358,9 @@ export class TableChartStrategy extends BaseChartStrategy {
       dateFilter.lte as Date,
     ];
 
-    if (dimensionFilters.customerId) {
+    if (dimensionFilters['customerId']) {
       whereConditions.push('customer_id = ?');
-      whereParams.push(dimensionFilters.customerId);
+      whereParams.push(dimensionFilters['customerId']);
     }
 
     const query = `

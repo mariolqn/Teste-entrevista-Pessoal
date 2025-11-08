@@ -26,12 +26,12 @@ export async function healthRoutes(app: FastifyInstance) {
         },
       },
     },
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     return reply.status(200).send({
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env['npm_package_version'] || '1.0.0',
     });
   });
 
@@ -57,7 +57,7 @@ export async function healthRoutes(app: FastifyInstance) {
         },
       },
     },
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     // Basic check - if the server can respond, it's alive
     return reply.status(200).send({
       status: 'alive',
@@ -100,7 +100,7 @@ export async function healthRoutes(app: FastifyInstance) {
         },
       },
     },
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     // Check all dependencies
     const [dbHealth, redisHealth] = await Promise.all([
       checkDatabaseHealth(),
@@ -188,7 +188,7 @@ export async function healthRoutes(app: FastifyInstance) {
         },
       },
     },
-  }, async (request, reply) => {
+  }, async (_request, reply) => {
     // Check database health with timing
     const dbStart = Date.now();
     const dbHealth = await checkDatabaseHealth();
@@ -209,7 +209,7 @@ export async function healthRoutes(app: FastifyInstance) {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      version: process.env.npm_package_version || '1.0.0',
+      version: process.env['npm_package_version'] || '1.0.0',
       services: {
         database: {
           status: dbHealth ? 'connected' : 'disconnected',

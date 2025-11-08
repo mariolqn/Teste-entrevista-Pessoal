@@ -65,19 +65,19 @@ export abstract class BaseChartStrategy implements ChartStrategy {
     const filters: Record<string, any> = {};
 
     if (params.categoryId) {
-      filters.categoryId = params.categoryId;
+      filters['categoryId'] = params.categoryId;
     }
 
     if (params.productId) {
-      filters.productId = params.productId;
+      filters['productId'] = params.productId;
     }
 
     if (params.customerId) {
-      filters.customerId = params.customerId;
+      filters['customerId'] = params.customerId;
     }
 
     if (params.region) {
-      filters.customer = {
+      filters['customer'] = {
         region: params.region,
       };
     }
@@ -97,7 +97,7 @@ export abstract class BaseChartStrategy implements ChartStrategy {
       count: 'COUNT(*)',
     };
 
-    return aggregations[metric] || aggregations.revenue;
+    return aggregations[metric] || aggregations['revenue'];
   }
 
   /**
@@ -112,7 +112,7 @@ export abstract class BaseChartStrategy implements ChartStrategy {
       year: '%Y',
     };
 
-    return formats[groupBy] || formats.day;
+    return formats[groupBy] || formats['day'];
   }
 
   /**
@@ -155,7 +155,7 @@ export abstract class BaseChartStrategy implements ChartStrategy {
         ...others[0],
         label: 'Others',
         value: othersSum,
-      } as T);
+      } as unknown as T);
     }
 
     return top;
@@ -178,7 +178,7 @@ export abstract class BaseChartStrategy implements ChartStrategy {
       '#84CC16', // lime
     ];
 
-    return colors[index % colors.length];
+    return colors[index % colors.length] || '#3B82F6';
   }
 
   /**

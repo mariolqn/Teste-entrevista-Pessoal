@@ -36,10 +36,9 @@ export class KPIChartStrategy extends BaseChartStrategy {
 
     // Build filters
     const currentFilter = this.buildDateFilter(start, end);
-    const previousFilter = this.buildDateFilter(
-      previousStartDate.toISOString().split('T')[0],
-      previousEndDate.toISOString().split('T')[0],
-    );
+    const prevStartStr = previousStartDate.toISOString().split('T')[0];
+    const prevEndStr = previousEndDate.toISOString().split('T')[0];
+    const previousFilter = this.buildDateFilter(prevStartStr, prevEndStr);
     const dimensionFilters = this.buildDimensionFilters(params);
 
     // Fetch current period data
@@ -123,8 +122,8 @@ export class KPIChartStrategy extends BaseChartStrategy {
           end: end,
         },
         previous: {
-          start: previousStartDate.toISOString().split('T')[0],
-          end: previousEndDate.toISOString().split('T')[0],
+          start: prevStartStr,
+          end: prevEndStr,
         },
       },
     };
@@ -324,7 +323,7 @@ export class KPIChartStrategy extends BaseChartStrategy {
   private calculateKPI(
     current: number,
     previous: number,
-    label?: string,
+    _label?: string,
   ): KPIValue {
     const change = current - previous;
     const changePercentage = previous !== 0

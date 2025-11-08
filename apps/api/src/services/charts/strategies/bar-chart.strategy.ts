@@ -50,19 +50,19 @@ export class BarChartStrategy extends BaseChartStrategy {
       new Date(end + 'T23:59:59.999Z'),
     ];
 
-    if (dimensionFilters.categoryId) {
+    if (dimensionFilters['categoryId']) {
       whereConditions.push('t.category_id = ?');
-      whereParams.push(dimensionFilters.categoryId);
+      whereParams.push(dimensionFilters['categoryId']);
     }
 
-    if (dimensionFilters.productId) {
+    if (dimensionFilters['productId']) {
       whereConditions.push('t.product_id = ?');
-      whereParams.push(dimensionFilters.productId);
+      whereParams.push(dimensionFilters['productId']);
     }
 
-    if (dimensionFilters.customerId) {
+    if (dimensionFilters['customerId']) {
       whereConditions.push('t.customer_id = ?');
-      whereParams.push(dimensionFilters.customerId);
+      whereParams.push(dimensionFilters['customerId']);
     }
 
     // Build query for bar chart data
