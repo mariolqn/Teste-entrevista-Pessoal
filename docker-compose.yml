@@ -25,7 +25,6 @@ services:
       - --slow_query_log=1
       - --long_query_time=2
       - --general_log=0
-      - --log_error=/var/log/mysql/error.log
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s

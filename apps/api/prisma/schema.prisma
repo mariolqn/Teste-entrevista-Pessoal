@@ -1,0 +1,190 @@
+// Prisma Schema for Dynamic Dashboard
+// Optimized for financial data with proper indexes and relationships
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex", "tracing", "metrics", "views"]
+  binaryTargets   = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum TransactionType {
+  REVENUE
+  EXPENSE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// ==========================================
+// MODELS
+// ==========================================
+
+/// Category model - represents cost centers (Centro de Custo)
+model Category {
+  id          String   @id @default(uuid())
+  code        String   @unique @db.VarChar(20)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  products     Product[]
+  transactions Transaction[]
+
+  // Indexes for performance
+  @@index([code])
+  @@index([name])
+  @@index([isActive])
+  @@fulltext([name, description])
+  @@map("categories")
+}
+
+/// Product model - represents products/services
+model Product {
+  id         String   @id @default(uuid())
+  name       String   @db.VarChar(100)
+  code       String?  @unique @db.VarChar(50)
+  categoryId String   @map("category_id")
+  unitPrice  Decimal  @db.Decimal(15, 2) @map("unit_price")
+  unit       String?  @db.VarChar(20) @default("UN")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  transactions Transaction[]
+
+  // Indexes for performance
+  @@index([categoryId], map: "idx_products_category")
+  @@index([name], map: "idx_products_name")
+  @@index([code], map: "idx_products_code")
+  @@index([isActive], map: "idx_products_active")
+  @@index([unitPrice], map: "idx_products_price")
+  @@fulltext([name], map: "idx_products_name_fulltext")
+  @@map("products")
+}
+
+/// Customer model - represents clients/customers
+model Customer {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(100)
+  document  String   @unique @db.VarChar(20) // CPF or CNPJ
+  email     String?  @db.VarChar(100)
+  phone     String?  @db.VarChar(20)
+  address   String?  @db.Text
+  city      String?  @db.VarChar(50)
+  state     String?  @db.VarChar(2)
+  zipCode   String?  @db.VarChar(10) @map("zip_code")
+  region    String   @db.VarChar(50) // For geographical grouping
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  transactions Transaction[]
+
+  // Indexes for performance
+  @@index([region])
+  @@index([document])
+  @@index([email])
+  @@index([isActive])
+  @@index([state])
+  @@index([city])
+  @@fulltext([name])
+  @@map("customers")
+}
+
+/// Transaction model - main fact table for financial data
+model Transaction {
+  id            String          @id @default(uuid())
+  type          TransactionType
+  productId     String?         @map("product_id")
+  customerId    String?         @map("customer_id")
+  categoryId    String          @map("category_id")
+  
+  // Financial fields
+  amount        Decimal         @db.Decimal(15, 2) // Total amount
+  quantity      Int             @default(1)
+  unitPrice     Decimal?        @db.Decimal(15, 2) @map("unit_price")
+  discount      Decimal?        @db.Decimal(15, 2) @default(0)
+  tax           Decimal?        @db.Decimal(15, 2) @default(0)
+  
+  // Date fields
+  occurredAt    DateTime        @map("occurred_at") @db.DateTime(3)
+  dueDate       DateTime?       @map("due_date") @db.Date
+  paidAt        DateTime?       @map("paid_at") @db.DateTime(3)
+  
+  // Status and metadata
+  paymentStatus PaymentStatus   @default(PENDING) @map("payment_status")
+  invoiceNumber String?         @db.VarChar(50) @map("invoice_number")
+  description   String?         @db.Text
+  reference     String?         @db.VarChar(100) // External reference
+  notes         String?         @db.Text
+  
+  // Audit fields
+  createdBy     String?         @db.VarChar(100) @map("created_by")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  product  Product?  @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Indexes for performance - optimized for dashboard queries
+  @@index([occurredAt, type]) // Main query pattern
+  @@index([categoryId, occurredAt]) // Category filtering
+  @@index([customerId, occurredAt]) // Customer filtering
+  @@index([productId, occurredAt]) // Product filtering
+  @@index([dueDate, paymentStatus]) // Accounts payable/receivable
+  @@index([paidAt]) // Payment tracking
+  @@index([type, amount]) // Amount aggregations
+  @@index([paymentStatus]) // Status filtering
+  @@index([invoiceNumber]) // Invoice lookup
+  @@index([occurredAt, categoryId, type]) // Composite for complex queries
+  @@map("transactions")
+}
+
+// ==========================================
+// VIEWS (for complex aggregations)
+// ==========================================
+
+/// View for daily aggregations (created via migration)
+view DailySummary {
+  date          DateTime @id
+  totalRevenue  Decimal  @map("total_revenue")
+  totalExpense  Decimal  @map("total_expense")
+  totalProfit   Decimal  @map("total_profit")
+  transactionCount Int   @map("transaction_count")
+  
+  @@map("v_daily_summary")
+}
+
+/// View for category performance
+view CategoryPerformance {
+  categoryId    String  @id @map("category_id")
+  categoryName  String  @map("category_name")
+  period        String
+  revenue       Decimal
+  expense       Decimal
+  profit        Decimal
+  transactionCount Int @map("transaction_count")
+  
+  @@map("v_category_performance")
+}
