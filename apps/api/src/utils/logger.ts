@@ -16,8 +16,8 @@ const loggerOptions: pino.LoggerOptions = {
     },
     bindings: (bindings) => {
       return {
-        pid: bindings.pid,
-        host: bindings.hostname,
+        pid: bindings['pid'],
+        host: bindings['hostname'],
         node_version: process.version,
       };
     },
@@ -66,7 +66,7 @@ const loggerOptions: pino.LoggerOptions = {
   base: {
     env: config.env,
     service: 'dashboard-api',
-    version: process.env.npm_package_version || '1.0.0',
+    version: process.env['npm_package_version'] || '1.0.0',
   },
 };
 
