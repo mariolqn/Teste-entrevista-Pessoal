@@ -16,6 +16,7 @@ import { connectRedis, disconnectRedis } from './lib/redis';
 
 // Import routes
 import { healthRoutes } from './routes/health.routes';
+import { chartRoutes } from './routes/chart.routes';
 
 /**
  * Build the Fastify application
@@ -136,9 +137,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Register routes
   await app.register(healthRoutes, { prefix: '/api/v1' });
+  await app.register(chartRoutes, { prefix: '/api/v1' });
   
   // TODO: Register other routes
-  // await app.register(chartRoutes, { prefix: '/api/v1' });
   // await app.register(optionsRoutes, { prefix: '/api/v1' });
   // await app.register(dashboardRoutes, { prefix: '/api/v1' });
 
