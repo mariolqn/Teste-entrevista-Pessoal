@@ -26,7 +26,7 @@ module.exports = {
     'plugin:react-hooks/recommended',
     'plugin:jsx-a11y/recommended',
     'plugin:sonarjs/recommended',
-    'plugin:security/recommended',
+    'plugin:security/recommended-legacy',
     'plugin:unicorn/recommended',
     'prettier',
   ],
@@ -139,7 +139,12 @@ module.exports = {
 
     /* SonarJS */
     'sonarjs/cognitive-complexity': ['error', 15],
-    'sonarjs/no-duplicate-string': ['error', 5],
+    'sonarjs/no-duplicate-string': [
+      'error',
+      {
+        threshold: 5,
+      },
+    ],
     'sonarjs/no-identical-functions': 'error',
     'sonarjs/no-collapsible-if': 'error',
 
