@@ -12,34 +12,12 @@
 
 import { PrismaClient, TransactionType, PaymentStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
-import { addDays, subDays, startOfMonth, endOfMonth, addMonths, format } from 'date-fns';
+import { addDays, subDays, startOfMonth, addMonths, format } from 'date-fns';
 
 const prisma = new PrismaClient();
 
 // Helper to create decimal values
 const decimal = (value: number): Decimal => new Decimal(value);
-
-// Helper to generate CPF (for testing only)
-function generateCPF(): string {
-  const random = () => Math.floor(Math.random() * 9);
-  const nums = Array.from({ length: 9 }, random);
-  
-  // Calculate first digit
-  let sum = nums.reduce((acc, num, idx) => acc + num * (10 - idx), 0);
-  let digit1 = 11 - (sum % 11);
-  if (digit1 >= 10) digit1 = 0;
-  nums.push(digit1);
-  
-  // Calculate second digit
-  sum = nums.reduce((acc, num, idx) => acc + num * (11 - idx), 0);
-  let digit2 = 11 - (sum % 11);
-  if (digit2 >= 10) digit2 = 0;
-  nums.push(digit2);
-  
-  // Format as XXX.XXX.XXX-XX
-  const cpf = nums.join('');
-  return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9, 11)}`;
-}
 
 // Helper to generate CNPJ (for testing only)
 function generateCNPJ(): string {
@@ -48,13 +26,13 @@ function generateCNPJ(): string {
   
   // Calculate first digit
   const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  let sum = nums.reduce((acc, num, idx) => acc + num * weights1[idx], 0);
+  let sum = nums.reduce((acc, num, idx) => acc + num * (weights1[idx] ?? 0), 0);
   let digit1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   nums.push(digit1);
   
   // Calculate second digit
   const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-  sum = nums.reduce((acc, num, idx) => acc + num * weights2[idx], 0);
+  sum = nums.reduce((acc, num, idx) => acc + num * (weights2[idx] ?? 0), 0);
   let digit2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   nums.push(digit2);
   
@@ -102,7 +80,7 @@ async function seed() {
     }),
   ]);
   
-  const [suzanoCategory, itabiraCategory, adminCategory] = categories;
+  const [suzanoCategory, itabiraCategory, _adminCategory] = categories;
   
   // Create Products/Services
   console.log('📦 Creating products/services...');
@@ -231,8 +209,6 @@ async function seed() {
   
   const now = new Date();
   const currentMonth = startOfMonth(now);
-  const lastMonth = startOfMonth(subDays(currentMonth, 1));
-  const twoMonthsAgo = startOfMonth(subDays(lastMonth, 1));
   
   const transactions = [];
   
@@ -542,7 +518,12 @@ async function seed() {
           data: {
             type: TransactionType.REVENUE,
             categoryId: data.month % 2 === 0 ? suzanoCategory.id : itabiraCategory.id,
-            productId: data.month % 3 === 0 ? freightTruck.id : freightBitrem.id,
+            productId:
+              data.month % 3 === 0
+                ? freightTruck.id
+                : data.month % 3 === 1
+                  ? freightBitrem.id
+                  : miningTransport.id,
             customerId: data.month % 2 === 0 ? suzanoCustomer.id : valeCustomer.id,
             amount: decimal(data.revenue),
             quantity: Math.floor(data.revenue / 1000),
@@ -643,6 +624,7 @@ async function seed() {
     },
   });
   
+  console.log('🧾 Transactions (last 100 days):', totals._count);
   console.log('💰 Total Revenue:', revenueTotal._sum.amount?.toString());
   console.log('💸 Total Expense:', expenseTotal._sum.amount?.toString());
   console.log('📈 Net Profit:', 

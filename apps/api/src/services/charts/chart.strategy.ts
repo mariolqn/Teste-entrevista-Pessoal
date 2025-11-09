@@ -89,30 +89,32 @@ export abstract class BaseChartStrategy implements ChartStrategy {
    * Get SQL aggregation function based on metric
    */
   protected getMetricAggregation(metric: string): string {
-    const aggregations: Record<string, string> = {
+    const aggregations = {
       revenue: "SUM(CASE WHEN type = 'REVENUE' THEN amount ELSE 0 END)",
       expense: "SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END)",
       profit: "SUM(CASE WHEN type = 'REVENUE' THEN amount ELSE -amount END)",
       quantity: 'SUM(quantity)',
       count: 'COUNT(*)',
-    };
+    } satisfies Record<string, string>;
 
-    return aggregations[metric] || aggregations['revenue'];
+    const key = metric as keyof typeof aggregations;
+    return aggregations[key] ?? aggregations.revenue;
   }
 
   /**
    * Get SQL date format based on groupBy parameter
    */
   protected getDateFormat(groupBy: string): string {
-    const formats: Record<string, string> = {
+    const formats = {
       day: '%Y-%m-%d',
       week: '%Y-%u',
       month: '%Y-%m',
       quarter: "CONCAT(YEAR(occurred_at), '-Q', QUARTER(occurred_at))",
       year: '%Y',
-    };
+    } satisfies Record<string, string>;
 
-    return formats[groupBy] || formats['day'];
+    const key = groupBy as keyof typeof formats;
+    return formats[key] ?? formats.day;
   }
 
   /**
@@ -178,7 +180,8 @@ export abstract class BaseChartStrategy implements ChartStrategy {
       '#84CC16', // lime
     ];
 
-    return colors[index % colors.length] || '#3B82F6';
+    const selected = colors[index % colors.length];
+    return selected ?? '#3B82F6';
   }
 
   /**

@@ -36,8 +36,10 @@ export class KPIChartStrategy extends BaseChartStrategy {
 
     // Build filters
     const currentFilter = this.buildDateFilter(start, end);
-    const prevStartStr = previousStartDate.toISOString().split('T')[0];
-    const prevEndStr = previousEndDate.toISOString().split('T')[0];
+    const [prevStartStrRaw] = previousStartDate.toISOString().split('T');
+    const [prevEndStrRaw] = previousEndDate.toISOString().split('T');
+    const prevStartStr = prevStartStrRaw ?? start;
+    const prevEndStr = prevEndStrRaw ?? end;
     const previousFilter = this.buildDateFilter(prevStartStr, prevEndStr);
     const dimensionFilters = this.buildDimensionFilters(params);
 
