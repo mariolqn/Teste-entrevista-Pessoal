@@ -3,22 +3,23 @@
  * Handles HTTP requests for chart data endpoints
  */
 
-import { FastifyRequest, FastifyReply } from 'fastify';
+import crypto from 'node:crypto';
+
 import { z } from 'zod';
-import crypto from 'crypto';
-import { ChartService } from '../services/charts/chart.service.js';
-import { 
-  chartParamsSchema, 
+
+import {
+  chartParamsSchema,
   chartQuerySchema,
   type ChartParams,
   type ChartQuery,
 } from '../types/charts.types.js';
 import { logger } from '../utils/logger.js';
 
+import type { ChartService } from '../services/charts/chart.service.js';
+import type { FastifyRequest, FastifyReply } from 'fastify';
+
 export class ChartController {
-  constructor(
-    private chartService: ChartService,
-  ) {}
+  constructor(private chartService: ChartService) {}
 
   /**
    * Get chart data endpoint handler
@@ -41,8 +42,8 @@ export class ChartController {
 
       // Log request
       logger.info(
-        { 
-          requestId, 
+        {
+          requestId,
           chartType: params.chartType,
           dateRange: { start: query.start, end: query.end },
           metric: query.metric,
@@ -74,13 +75,13 @@ export class ChartController {
 
       // Set cache headers
       const cacheControl = this.getCacheControl(params.chartType);
-      
+
       // Send response with appropriate headers
       const duration = Date.now() - startTime;
       logger.info(
-        { 
-          requestId, 
-          duration, 
+        {
+          requestId,
+          duration,
           dataSize: JSON.stringify(data).length,
         },
         'Chart data sent successfully',
@@ -91,21 +92,20 @@ export class ChartController {
         .header('Cache-Control', cacheControl)
         .header('X-Response-Time', `${duration}ms`)
         .send(data);
-        
     } catch (error) {
       // Handle validation errors
       if (error instanceof z.ZodError) {
         return this.sendValidationError(
           reply,
-          error.errors.map(e => `${e.path.join('.')}: ${e.message}`),
+          error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
           request.url,
         );
       }
 
       // Log error
       logger.error(
-        { 
-          requestId, 
+        {
+          requestId,
           error,
           duration: Date.now() - startTime,
         },
@@ -129,7 +129,7 @@ export class ChartController {
   ) {
     try {
       const { chartType } = request.params;
-      
+
       // Validate chart type
       const validTypes = this.chartService.getAvailableChartTypes();
       if (!validTypes.includes(chartType as any)) {
@@ -146,10 +146,7 @@ export class ChartController {
       // Get metadata
       const metadata = this.chartService.getStrategyMetadata(chartType as any);
 
-      return reply
-        .header('Cache-Control', 'public, max-age=3600')
-        .send(metadata);
-        
+      return reply.header('Cache-Control', 'public, max-age=3600').send(metadata);
     } catch (error) {
       logger.error({ error }, 'Error getting chart metadata');
       return this.sendServerError(reply, error, request.url);
@@ -160,23 +157,17 @@ export class ChartController {
    * Get available chart types endpoint handler
    * GET /api/v1/charts/types
    */
-  async getChartTypes(
-    request: FastifyRequest,
-    reply: FastifyReply,
-  ) {
+  async getChartTypes(request: FastifyRequest, reply: FastifyReply) {
     try {
       const types = this.chartService.getAvailableChartTypes();
-      
-      const response = types.map(type => ({
+
+      const response = types.map((type) => ({
         value: type,
         label: this.getChartTypeLabel(type),
         metadata: this.chartService.getStrategyMetadata(type),
       }));
 
-      return reply
-        .header('Cache-Control', 'public, max-age=3600')
-        .send({ types: response });
-        
+      return reply.header('Cache-Control', 'public, max-age=3600').send({ types: response });
     } catch (error) {
       logger.error({ error }, 'Error getting chart types');
       return this.sendServerError(reply, error, request.url);
@@ -204,10 +195,7 @@ export class ChartController {
    * Generate ETag for response
    */
   private generateETag(data: string): string {
-    return crypto
-      .createHash('md5')
-      .update(data)
-      .digest('hex');
+    return crypto.createHash('md5').update(data).digest('hex');
   }
 
   /**
@@ -216,12 +204,15 @@ export class ChartController {
   private getCacheControl(chartType: string): string {
     // Different cache strategies for different chart types
     switch (chartType) {
-      case 'kpi':
-        return 'private, max-age=30'; // KPIs refresh more frequently
-      case 'table':
-        return 'private, max-age=60'; // Tables moderate caching
-      default:
-        return 'private, max-age=120'; // Charts can be cached longer
+      case 'kpi': {
+        return 'private, max-age=30';
+      } // KPIs refresh more frequently
+      case 'table': {
+        return 'private, max-age=60';
+      } // Tables moderate caching
+      default: {
+        return 'private, max-age=120';
+      } // Charts can be cached longer
     }
   }
 
@@ -242,11 +233,7 @@ export class ChartController {
   /**
    * Send validation error response
    */
-  private sendValidationError(
-    reply: FastifyReply,
-    errors: string[],
-    instance: string,
-  ) {
+  private sendValidationError(reply: FastifyReply, errors: string[], instance: string) {
     return reply.status(400).send({
       type: 'https://api.dashboard.com/errors/validation',
       title: 'Validation Error',
@@ -260,13 +247,9 @@ export class ChartController {
   /**
    * Send server error response
    */
-  private sendServerError(
-    reply: FastifyReply,
-    error: any,
-    instance: string,
-  ) {
+  private sendServerError(reply: FastifyReply, error: any, instance: string) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred';
-    
+
     return reply.status(500).send({
       type: 'https://api.dashboard.com/errors/internal',
       title: 'Internal Server Error',

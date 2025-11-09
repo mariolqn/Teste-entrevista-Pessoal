@@ -3,15 +3,13 @@
  * Provides summary metrics for KPI cards.
  */
 
-import {
-  Prisma,
-  PrismaClient,
-  TransactionType,
-  PaymentStatus,
-} from '@prisma/client';
-import type { DashboardSummaryResponse } from '../../types/dashboard.types.js';
-import { cacheService } from '../../lib/redis.js';
+import { TransactionType, PaymentStatus } from '@prisma/client';
+
 import { config } from '../../config/index.js';
+import { cacheService } from '../../lib/redis.js';
+
+import type { DashboardSummaryResponse } from '../../types/dashboard.types.js';
+import type { Prisma, PrismaClient } from '@prisma/client';
 
 export interface DashboardSummaryParams {
   start: Date;
@@ -62,14 +60,8 @@ export class DashboardService {
       upcomingReceivable,
       upcomingPayable,
     ] = await Promise.all([
-      this.sumTransactions([
-        baseFilter,
-        { type: TransactionType.REVENUE },
-      ]),
-      this.sumTransactions([
-        baseFilter,
-        { type: TransactionType.EXPENSE },
-      ]),
+      this.sumTransactions([baseFilter, { type: TransactionType.REVENUE }]),
+      this.sumTransactions([baseFilter, { type: TransactionType.EXPENSE }]),
       this.sumTransactions([
         baseFilter,
         { type: TransactionType.REVENUE },
@@ -178,10 +170,7 @@ export class DashboardService {
       OR: [
         { paymentStatus: PaymentStatus.OVERDUE },
         {
-          AND: [
-            { paymentStatus: PaymentStatus.PENDING },
-            { paidAt: null },
-          ],
+          AND: [{ paymentStatus: PaymentStatus.PENDING }, { paidAt: null }],
         },
       ],
     };
@@ -206,18 +195,19 @@ export class DashboardService {
    * Filters are combined via AND semantics.
    */
   private async sumTransactions(
-    filters: Array<Prisma.TransactionWhereInput | undefined>,
+    filters: (Prisma.TransactionWhereInput | undefined)[],
   ): Promise<number> {
     const definedFilters = filters.filter(
-      (filter): filter is Prisma.TransactionWhereInput => Boolean(filter),
+      (filter): filter is Prisma.TransactionWhereInput => filter !== undefined,
     );
 
-    const where =
-      definedFilters.length === 0
-        ? undefined
-        : definedFilters.length === 1
-        ? definedFilters[0]
-        : { AND: definedFilters };
+    let where: Prisma.TransactionWhereInput | undefined;
+
+    if (definedFilters.length === 1) {
+      [where] = definedFilters;
+    } else if (definedFilters.length > 1) {
+      where = { AND: definedFilters };
+    }
 
     const aggregateArgs: Prisma.TransactionAggregateArgs = {
       _sum: { amount: true },
@@ -277,4 +267,3 @@ export class DashboardService {
     return Math.min(60, Math.max(10, config.redisTtl));
   }
 }
-

@@ -3,14 +3,15 @@
  * Generates time-series data for line charts
  */
 
-import { PrismaClient } from '@prisma/client';
 import { BaseChartStrategy } from '../chart.strategy.js';
+
 import type {
   ChartRequest,
   LineChartResponse,
   LineChartPoint,
   LineChartSeries,
 } from '../../../types/charts.types.js';
+import type { PrismaClient } from '@prisma/client';
 
 export class LineChartStrategy extends BaseChartStrategy {
   getName(): string {
@@ -21,10 +22,7 @@ export class LineChartStrategy extends BaseChartStrategy {
     return params.chartType === 'line';
   }
 
-  async execute(
-    params: ChartRequest,
-    prisma: PrismaClient,
-  ): Promise<LineChartResponse> {
+  async execute(params: ChartRequest, prisma: PrismaClient): Promise<LineChartResponse> {
     const { start, end, metric, groupBy = 'day' } = params;
 
     // Build the raw SQL query for better performance
@@ -35,8 +33,8 @@ export class LineChartStrategy extends BaseChartStrategy {
     // Create WHERE clause conditions
     const whereConditions = [`occurred_at >= ? AND occurred_at <= ?`];
     const whereParams: any[] = [
-      new Date(start + 'T00:00:00.000Z'),
-      new Date(end + 'T23:59:59.999Z'),
+      new Date(`${start}T00:00:00.000Z`),
+      new Date(`${end}T23:59:59.999Z`),
     ];
 
     if (dimensionFilters['categoryId']) {
@@ -89,11 +87,11 @@ export class LineChartStrategy extends BaseChartStrategy {
 
     // Execute query
     const results = await prisma.$queryRawUnsafe<
-      Array<{
+      {
         period: string;
         series_name: string;
         value: number | bigint;
-      }>
+      }[]
     >(query, ...whereParams);
 
     // Transform results to line chart format
@@ -125,12 +123,11 @@ export class LineChartStrategy extends BaseChartStrategy {
     }
 
     // Calculate metadata
-    const allValues = results.map(r => Number(r.value));
+    const allValues = results.map((r) => Number(r.value));
     const metadata = {
       total: allValues.reduce((sum, val) => sum + val, 0),
-      average: allValues.length > 0 
-        ? allValues.reduce((sum, val) => sum + val, 0) / allValues.length 
-        : 0,
+      average:
+        allValues.length > 0 ? allValues.reduce((sum, val) => sum + val, 0) / allValues.length : 0,
       min: Math.min(...allValues),
       max: Math.max(...allValues),
     };
@@ -191,7 +188,7 @@ export class LineChartStrategy extends BaseChartStrategy {
     }
 
     // Create a map of existing points
-    const pointMap = new Map(points.map(p => [p.x, p.y]));
+    const pointMap = new Map(points.map((p) => [p.x, p.y]));
 
     // Generate all dates in range
     const filledPoints: LineChartPoint[] = [];
@@ -222,14 +219,18 @@ export class LineChartStrategy extends BaseChartStrategy {
     const day = String(date.getDate()).padStart(2, '0');
 
     switch (groupBy) {
-      case 'day':
+      case 'day': {
         return `${year}-${month}-${day}`;
-      case 'month':
+      }
+      case 'month': {
         return `${year}-${month}-01`;
-      case 'year':
+      }
+      case 'year': {
         return `${year}-01-01`;
-      default:
+      }
+      default: {
         return `${year}-${month}-${day}`;
+      }
     }
   }
 
@@ -238,21 +239,26 @@ export class LineChartStrategy extends BaseChartStrategy {
    */
   private incrementDateByGrouping(date: Date, groupBy: string): void {
     switch (groupBy) {
-      case 'day':
+      case 'day': {
         date.setDate(date.getDate() + 1);
         break;
-      case 'week':
+      }
+      case 'week': {
         date.setDate(date.getDate() + 7);
         break;
-      case 'month':
+      }
+      case 'month': {
         date.setMonth(date.getMonth() + 1);
         break;
-      case 'quarter':
+      }
+      case 'quarter': {
         date.setMonth(date.getMonth() + 3);
         break;
-      case 'year':
+      }
+      case 'year': {
         date.setFullYear(date.getFullYear() + 1);
         break;
+      }
     }
   }
 }

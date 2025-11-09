@@ -3,14 +3,15 @@
  * Generates tabular data with pagination support
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
 import { BaseChartStrategy } from '../chart.strategy.js';
+
 import type {
   ChartRequest,
   TableChartResponse,
   TableColumn,
   TableRow,
 } from '../../../types/charts.types.js';
+import type { PrismaClient, Prisma } from '@prisma/client';
 
 export class TableChartStrategy extends BaseChartStrategy {
   getName(): string {
@@ -21,10 +22,7 @@ export class TableChartStrategy extends BaseChartStrategy {
     return params.chartType === 'table';
   }
 
-  async execute(
-    params: ChartRequest,
-    prisma: PrismaClient,
-  ): Promise<TableChartResponse> {
+  async execute(params: ChartRequest, prisma: PrismaClient): Promise<TableChartResponse> {
     const { start, end, limit = 20, cursor, dimension = 'category' } = params;
 
     // Parse cursor for pagination
@@ -41,60 +39,50 @@ export class TableChartStrategy extends BaseChartStrategy {
     let columns: TableColumn[];
 
     switch (dimension) {
-      case 'transactions':
-        ({ result: queryResult, total: totalCount, columns } = 
-          await this.getTransactionsTable(
-            prisma,
-            dateFilter,
-            dimensionFilters,
-            skip,
-            limit,
-          ));
+      case 'transactions': {
+        ({
+          result: queryResult,
+          total: totalCount,
+          columns,
+        } = await this.getTransactionsTable(prisma, dateFilter, dimensionFilters, skip, limit));
         break;
+      }
 
-      case 'category':
-        ({ result: queryResult, total: totalCount, columns } = 
-          await this.getCategoryTable(
-            prisma,
-            dateFilter,
-            dimensionFilters,
-            skip,
-            limit,
-          ));
+      case 'category': {
+        ({
+          result: queryResult,
+          total: totalCount,
+          columns,
+        } = await this.getCategoryTable(prisma, dateFilter, dimensionFilters, skip, limit));
         break;
+      }
 
-      case 'product':
-        ({ result: queryResult, total: totalCount, columns } = 
-          await this.getProductTable(
-            prisma,
-            dateFilter,
-            dimensionFilters,
-            skip,
-            limit,
-          ));
+      case 'product': {
+        ({
+          result: queryResult,
+          total: totalCount,
+          columns,
+        } = await this.getProductTable(prisma, dateFilter, dimensionFilters, skip, limit));
         break;
+      }
 
-      case 'customer':
-        ({ result: queryResult, total: totalCount, columns } = 
-          await this.getCustomerTable(
-            prisma,
-            dateFilter,
-            dimensionFilters,
-            skip,
-            limit,
-          ));
+      case 'customer': {
+        ({
+          result: queryResult,
+          total: totalCount,
+          columns,
+        } = await this.getCustomerTable(prisma, dateFilter, dimensionFilters, skip, limit));
         break;
+      }
 
-      default:
+      default: {
         // Default to category summary
-        ({ result: queryResult, total: totalCount, columns } = 
-          await this.getCategoryTable(
-            prisma,
-            dateFilter,
-            dimensionFilters,
-            skip,
-            limit,
-          ));
+        ({
+          result: queryResult,
+          total: totalCount,
+          columns,
+        } = await this.getCategoryTable(prisma, dateFilter, dimensionFilters, skip, limit));
+      }
     }
 
     // Transform results to table rows
@@ -104,9 +92,7 @@ export class TableChartStrategy extends BaseChartStrategy {
     const hasMore = skip + queryResult.length < totalCount;
 
     // Create next cursor if there are more results
-    const nextCursor = hasMore
-      ? this.encodeCursor({ skip: skip + limit })
-      : undefined;
+    const nextCursor = hasMore ? this.encodeCursor({ skip: skip + limit }) : undefined;
 
     const response: TableChartResponse = {
       columns,
@@ -114,11 +100,11 @@ export class TableChartStrategy extends BaseChartStrategy {
       hasMore,
       total: totalCount,
     };
-    
+
     if (nextCursor !== undefined) {
       response.cursor = nextCursor;
     }
-    
+
     return response;
   }
 
@@ -163,11 +149,11 @@ export class TableChartStrategy extends BaseChartStrategy {
       { key: 'status', label: 'Status', type: 'string', sortable: true },
     ];
 
-    const rows = result.map(transaction => ({
+    const rows = result.map((transaction) => ({
       id: transaction.id,
       occurredAt: transaction.occurredAt.toISOString(),
       type: transaction.type === 'REVENUE' ? 'Receita' : 'Despesa',
-      category: transaction.category?.name || '-',
+      category: transaction.category.name || '-',
       product: transaction.product?.name || '-',
       customer: transaction.customer?.name || '-',
       amount: Number(transaction.amount),
@@ -190,10 +176,7 @@ export class TableChartStrategy extends BaseChartStrategy {
   ): Promise<{ result: any[]; total: number; columns: TableColumn[] }> {
     // Build raw query for aggregated data
     const whereConditions = [`occurred_at >= ? AND occurred_at <= ?`];
-    const whereParams: any[] = [
-      dateFilter.gte as Date,
-      dateFilter.lte as Date,
-    ];
+    const whereParams: any[] = [dateFilter.gte as Date, dateFilter.lte as Date];
 
     if (dimensionFilters['categoryId']) {
       whereConditions.push('category_id = ?');
@@ -226,19 +209,16 @@ export class TableChartStrategy extends BaseChartStrategy {
 
     const [result, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<
-        Array<{
+        {
           id: string;
           name: string;
           expense: number | bigint;
           revenue: number | bigint;
           profit: number | bigint;
           transaction_count: number | bigint;
-        }>
+        }[]
       >(query, ...whereParams, limit, skip),
-      prisma.$queryRawUnsafe<[{ total: bigint }]>(
-        countQuery,
-        ...whereParams,
-      ),
+      prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery, ...whereParams),
     ]);
 
     const columns: TableColumn[] = [
@@ -246,10 +226,16 @@ export class TableChartStrategy extends BaseChartStrategy {
       { key: 'expense', label: 'Despesa', type: 'currency', sortable: true, align: 'right' },
       { key: 'revenue', label: 'Receita', type: 'currency', sortable: true, align: 'right' },
       { key: 'profit', label: 'Resultado', type: 'currency', sortable: true, align: 'right' },
-      { key: 'transaction_count', label: 'Transações', type: 'number', sortable: true, align: 'right' },
+      {
+        key: 'transaction_count',
+        label: 'Transações',
+        type: 'number',
+        sortable: true,
+        align: 'right',
+      },
     ];
 
-    const rows = result.map(row => ({
+    const rows = result.map((row) => ({
       id: row.id,
       name: row.name,
       expense: Number(row.expense),
@@ -258,9 +244,9 @@ export class TableChartStrategy extends BaseChartStrategy {
       transaction_count: Number(row.transaction_count),
     }));
 
-    return { 
-      result: rows, 
-      total: Number(countResult[0].total), 
+    return {
+      result: rows,
+      total: Number(countResult[0].total),
       columns,
     };
   }
@@ -276,10 +262,7 @@ export class TableChartStrategy extends BaseChartStrategy {
     limit: number,
   ): Promise<{ result: any[]; total: number; columns: TableColumn[] }> {
     const whereConditions = [`occurred_at >= ? AND occurred_at <= ?`];
-    const whereParams: any[] = [
-      dateFilter.gte as Date,
-      dateFilter.lte as Date,
-    ];
+    const whereParams: any[] = [dateFilter.gte as Date, dateFilter.lte as Date];
 
     if (dimensionFilters['productId']) {
       whereConditions.push('product_id = ?');
@@ -307,7 +290,7 @@ export class TableChartStrategy extends BaseChartStrategy {
 
     const [result, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<
-        Array<{
+        {
           id: string;
           name: string;
           category_name: string;
@@ -315,7 +298,7 @@ export class TableChartStrategy extends BaseChartStrategy {
           total_amount: number | bigint;
           avg_price: number | bigint | null;
           unique_customers: number | bigint;
-        }>
+        }[]
       >(query, ...whereParams, limit, skip),
       prisma.product.count(),
     ]);
@@ -323,13 +306,31 @@ export class TableChartStrategy extends BaseChartStrategy {
     const columns: TableColumn[] = [
       { key: 'name', label: 'Produto', type: 'string', sortable: true },
       { key: 'category_name', label: 'Categoria', type: 'string', sortable: true },
-      { key: 'total_quantity', label: 'Quantidade Total', type: 'number', sortable: true, align: 'right' },
-      { key: 'total_amount', label: 'Valor Total', type: 'currency', sortable: true, align: 'right' },
+      {
+        key: 'total_quantity',
+        label: 'Quantidade Total',
+        type: 'number',
+        sortable: true,
+        align: 'right',
+      },
+      {
+        key: 'total_amount',
+        label: 'Valor Total',
+        type: 'currency',
+        sortable: true,
+        align: 'right',
+      },
       { key: 'avg_price', label: 'Preço Médio', type: 'currency', sortable: true, align: 'right' },
-      { key: 'unique_customers', label: 'Clientes', type: 'number', sortable: true, align: 'right' },
+      {
+        key: 'unique_customers',
+        label: 'Clientes',
+        type: 'number',
+        sortable: true,
+        align: 'right',
+      },
     ];
 
-    const rows = result.map(row => ({
+    const rows = result.map((row) => ({
       id: row.id,
       name: row.name,
       category_name: row.category_name || '-',
@@ -353,10 +354,7 @@ export class TableChartStrategy extends BaseChartStrategy {
     limit: number,
   ): Promise<{ result: any[]; total: number; columns: TableColumn[] }> {
     const whereConditions = [`occurred_at >= ? AND occurred_at <= ?`];
-    const whereParams: any[] = [
-      dateFilter.gte as Date,
-      dateFilter.lte as Date,
-    ];
+    const whereParams: any[] = [dateFilter.gte as Date, dateFilter.lte as Date];
 
     if (dimensionFilters['customerId']) {
       whereConditions.push('customer_id = ?');
@@ -383,7 +381,7 @@ export class TableChartStrategy extends BaseChartStrategy {
 
     const [result, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<
-        Array<{
+        {
           id: string;
           name: string;
           region: string;
@@ -391,7 +389,7 @@ export class TableChartStrategy extends BaseChartStrategy {
           total_expense: number | bigint;
           transaction_count: number | bigint;
           last_transaction: Date | null;
-        }>
+        }[]
       >(query, ...whereParams, limit, skip),
       prisma.customer.count(),
     ]);
@@ -399,13 +397,31 @@ export class TableChartStrategy extends BaseChartStrategy {
     const columns: TableColumn[] = [
       { key: 'name', label: 'Cliente', type: 'string', sortable: true },
       { key: 'region', label: 'Região', type: 'string', sortable: true },
-      { key: 'total_revenue', label: 'Receita Total', type: 'currency', sortable: true, align: 'right' },
-      { key: 'total_expense', label: 'Despesa Total', type: 'currency', sortable: true, align: 'right' },
-      { key: 'transaction_count', label: 'Transações', type: 'number', sortable: true, align: 'right' },
+      {
+        key: 'total_revenue',
+        label: 'Receita Total',
+        type: 'currency',
+        sortable: true,
+        align: 'right',
+      },
+      {
+        key: 'total_expense',
+        label: 'Despesa Total',
+        type: 'currency',
+        sortable: true,
+        align: 'right',
+      },
+      {
+        key: 'transaction_count',
+        label: 'Transações',
+        type: 'number',
+        sortable: true,
+        align: 'right',
+      },
       { key: 'last_transaction', label: 'Última Transação', type: 'date', sortable: true },
     ];
 
-    const rows = result.map(row => ({
+    const rows = result.map((row) => ({
       id: row.id,
       name: row.name,
       region: row.region || '-',
@@ -423,10 +439,10 @@ export class TableChartStrategy extends BaseChartStrategy {
    */
   private formatStatus(status: string): string {
     const statusMap: Record<string, string> = {
-      'PENDING': 'Pendente',
-      'PAID': 'Pago',
-      'OVERDUE': 'Vencido',
-      'CANCELLED': 'Cancelado',
+      PENDING: 'Pendente',
+      PAID: 'Pago',
+      OVERDUE: 'Vencido',
+      CANCELLED: 'Cancelado',
     };
     return statusMap[status] || status;
   }

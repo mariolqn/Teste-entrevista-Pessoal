@@ -3,15 +3,17 @@
  * Handles KPI summary endpoints.
  */
 
-import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { DashboardService } from '../services/dashboard/dashboard.service.js';
+
 import {
   dashboardSummaryQuerySchema,
   type DashboardSummaryQuery,
 } from '../types/dashboard.types.js';
 import { ValidationError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
+
+import type { DashboardService } from '../services/dashboard/dashboard.service.js';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
@@ -66,7 +68,9 @@ export class DashboardController {
       return reply.header('Cache-Control', cacheControl).send(summary);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const detail = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join('; ');
+        const detail = error.errors
+          .map((err) => `${err.path.join('.')}: ${err.message}`)
+          .join('; ');
         throw new ValidationError(detail, {
           validation: error.flatten(),
         });
@@ -96,4 +100,3 @@ export class DashboardController {
     return parsed;
   }
 }
-

@@ -3,13 +3,10 @@
  * Generates key performance indicators with trend analysis
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
 import { BaseChartStrategy } from '../chart.strategy.js';
-import type {
-  ChartRequest,
-  KPIChartResponse,
-  KPIValue,
-} from '../../../types/charts.types.js';
+
+import type { ChartRequest, KPIChartResponse, KPIValue } from '../../../types/charts.types.js';
+import type { PrismaClient, Prisma } from '@prisma/client';
 
 export class KPIChartStrategy extends BaseChartStrategy {
   getName(): string {
@@ -20,17 +17,14 @@ export class KPIChartStrategy extends BaseChartStrategy {
     return params.chartType === 'kpi';
   }
 
-  async execute(
-    params: ChartRequest,
-    prisma: PrismaClient,
-  ): Promise<KPIChartResponse> {
+  async execute(params: ChartRequest, prisma: PrismaClient): Promise<KPIChartResponse> {
     const { start, end } = params;
 
     // Calculate previous period for comparison
     const startDate = new Date(start);
     const endDate = new Date(end);
     const periodDuration = endDate.getTime() - startDate.getTime();
-    
+
     const previousStartDate = new Date(startDate.getTime() - periodDuration);
     const previousEndDate = new Date(startDate.getTime() - 1); // Day before current period
 
@@ -44,46 +38,22 @@ export class KPIChartStrategy extends BaseChartStrategy {
     const dimensionFilters = this.buildDimensionFilters(params);
 
     // Fetch current period data
-    const currentData = await this.fetchPeriodData(
-      prisma,
-      currentFilter,
-      dimensionFilters,
-    );
+    const currentData = await this.fetchPeriodData(prisma, currentFilter, dimensionFilters);
 
     // Fetch previous period data
-    const previousData = await this.fetchPeriodData(
-      prisma,
-      previousFilter,
-      dimensionFilters,
-    );
+    const previousData = await this.fetchPeriodData(prisma, previousFilter, dimensionFilters);
 
     // Calculate KPIs
     const metrics: Record<string, KPIValue> = {
-      revenue: this.calculateKPI(
-        currentData.revenue,
-        previousData.revenue,
-        'Receita Total',
-      ),
-      expense: this.calculateKPI(
-        currentData.expense,
-        previousData.expense,
-        'Despesa Total',
-      ),
-      profit: this.calculateKPI(
-        currentData.profit,
-        previousData.profit,
-        'Lucro Líquido',
-      ),
+      revenue: this.calculateKPI(currentData.revenue, previousData.revenue, 'Receita Total'),
+      expense: this.calculateKPI(currentData.expense, previousData.expense, 'Despesa Total'),
+      profit: this.calculateKPI(currentData.profit, previousData.profit, 'Lucro Líquido'),
       transactions: this.calculateKPI(
         currentData.transactionCount,
         previousData.transactionCount,
         'Total de Transações',
       ),
-      avgTicket: this.calculateKPI(
-        currentData.avgTicket,
-        previousData.avgTicket,
-        'Ticket Médio',
-      ),
+      avgTicket: this.calculateKPI(currentData.avgTicket, previousData.avgTicket, 'Ticket Médio'),
       customers: this.calculateKPI(
         currentData.customerCount,
         previousData.customerCount,
@@ -120,8 +90,8 @@ export class KPIChartStrategy extends BaseChartStrategy {
       metrics,
       period: {
         current: {
-          start: start,
-          end: end,
+          start,
+          end,
         },
         previous: {
           start: prevStartStr,
@@ -322,15 +292,9 @@ export class KPIChartStrategy extends BaseChartStrategy {
   /**
    * Calculate KPI with comparison
    */
-  private calculateKPI(
-    current: number,
-    previous: number,
-    _label?: string,
-  ): KPIValue {
+  private calculateKPI(current: number, previous: number, _label?: string): KPIValue {
     const change = current - previous;
-    const changePercentage = previous !== 0
-      ? ((change / previous) * 100)
-      : (current > 0 ? 100 : 0);
+    const changePercentage = previous === 0 ? (current > 0 ? 100 : 0) : (change / previous) * 100;
 
     let trend: 'up' | 'down' | 'stable';
     if (change > 0) {

@@ -3,12 +3,10 @@
  * Generates comparative data for bar charts
  */
 
-import { PrismaClient } from '@prisma/client';
 import { BaseChartStrategy } from '../chart.strategy.js';
-import type {
-  ChartRequest,
-  BarChartResponse,
-} from '../../../types/charts.types.js';
+
+import type { ChartRequest, BarChartResponse } from '../../../types/charts.types.js';
+import type { PrismaClient } from '@prisma/client';
 
 export class BarChartStrategy extends BaseChartStrategy {
   getName(): string {
@@ -19,18 +17,8 @@ export class BarChartStrategy extends BaseChartStrategy {
     return params.chartType === 'bar';
   }
 
-  async execute(
-    params: ChartRequest,
-    prisma: PrismaClient,
-  ): Promise<BarChartResponse> {
-    const { 
-      start, 
-      end, 
-      metric, 
-      groupBy = 'category',
-      dimension = 'type',
-      topN 
-    } = params;
+  async execute(params: ChartRequest, prisma: PrismaClient): Promise<BarChartResponse> {
+    const { start, end, metric, groupBy = 'category', dimension = 'type', topN } = params;
 
     // Determine primary and secondary grouping
     const primaryGroup = this.getPrimaryGroupField(groupBy);
@@ -46,8 +34,8 @@ export class BarChartStrategy extends BaseChartStrategy {
     // Create WHERE clause conditions
     const whereConditions = [`t.occurred_at >= ? AND t.occurred_at <= ?`];
     const whereParams: any[] = [
-      new Date(start + 'T00:00:00.000Z'),
-      new Date(end + 'T23:59:59.999Z'),
+      new Date(`${start}T00:00:00.000Z`),
+      new Date(`${end}T23:59:59.999Z`),
     ];
 
     if (dimensionFilters['categoryId']) {
@@ -80,15 +68,15 @@ export class BarChartStrategy extends BaseChartStrategy {
     `;
 
     const results = await prisma.$queryRawUnsafe<
-      Array<{
+      {
         category: string;
         series_name: string;
         value: number | bigint;
-      }>
+      }[]
     >(query, ...whereParams);
 
     // Process results
-    const processedResults = results.map(r => ({
+    const processedResults = results.map((r) => ({
       ...r,
       value: Number(r.value),
     }));
@@ -98,38 +86,38 @@ export class BarChartStrategy extends BaseChartStrategy {
     const seriesSet = new Set<string>();
     const categoryTotals = new Map<string, number>();
 
-    processedResults.forEach(row => {
+    processedResults.forEach((row) => {
       const category = row.category || 'Unknown';
       const series = this.formatSeriesName(row.series_name || 'Unknown');
-      
+
       if (!categoryMap.has(category)) {
         categoryMap.set(category, new Map());
         categoryTotals.set(category, 0);
       }
-      
+
       categoryMap.get(category)!.set(series, row.value);
       categoryTotals.set(category, (categoryTotals.get(category) || 0) + row.value);
       seriesSet.add(series);
     });
 
     // Apply topN to categories if specified
-    let categories = Array.from(categoryMap.keys());
+    let categories = [...categoryMap.keys()];
     if (topN && topN < categories.length) {
       // Sort categories by total value
       const sortedCategories = categories
-        .map(cat => ({ name: cat, total: categoryTotals.get(cat) || 0 }))
+        .map((cat) => ({ name: cat, total: categoryTotals.get(cat) || 0 }))
         .sort((a, b) => b.total - a.total)
         .slice(0, topN)
-        .map(item => item.name);
-      
+        .map((item) => item.name);
+
       categories = sortedCategories;
     }
 
     // Build series data
-    const seriesNames = Array.from(seriesSet);
+    const seriesNames = [...seriesSet];
     const series = seriesNames.map((seriesName, index) => ({
       name: seriesName,
-      data: categories.map(category => {
+      data: categories.map((category) => {
         const categoryData = categoryMap.get(category);
         return categoryData?.get(seriesName) || 0;
       }),
@@ -138,9 +126,7 @@ export class BarChartStrategy extends BaseChartStrategy {
 
     // Calculate metadata
     const total = processedResults.reduce((sum, r) => sum + r.value, 0);
-    const average = processedResults.length > 0 
-      ? total / processedResults.length 
-      : 0;
+    const average = processedResults.length > 0 ? total / processedResults.length : 0;
 
     return {
       categories,
@@ -198,7 +184,7 @@ export class BarChartStrategy extends BaseChartStrategy {
       joins.add('LEFT JOIN customers cu ON t.customer_id = cu.id');
     }
 
-    return Array.from(joins).join(' ');
+    return [...joins].join(' ');
   }
 
   /**
@@ -235,12 +221,12 @@ export class BarChartStrategy extends BaseChartStrategy {
    */
   private formatSeriesName(name: string): string {
     const nameMap: Record<string, string> = {
-      'REVENUE': 'Receita',
-      'EXPENSE': 'Despesa',
-      'PENDING': 'Pendente',
-      'PAID': 'Pago',
-      'OVERDUE': 'Vencido',
-      'CANCELLED': 'Cancelado',
+      REVENUE: 'Receita',
+      EXPENSE: 'Despesa',
+      PENDING: 'Pendente',
+      PAID: 'Pago',
+      OVERDUE: 'Vencido',
+      CANCELLED: 'Cancelado',
     };
     return nameMap[name] || name;
   }

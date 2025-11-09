@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+
 import { buildApp } from '../src/app.js';
 
 process.env['SWAGGER_GENERATE'] = 'true';
@@ -52,7 +53,7 @@ function stringifyYaml(value: unknown, indent = 0): string {
   }
 
   if (isPlainObject(value)) {
-    const entries = Object.entries(value as Record<string, unknown>);
+    const entries = Object.entries(value);
     if (entries.length === 0) {
       return '{}';
     }
@@ -90,13 +91,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function formatPrimitive(value: Primitive): string {
   switch (typeof value) {
-    case 'string':
+    case 'string': {
       return escapeString(value);
+    }
     case 'number':
-    case 'boolean':
+    case 'boolean': {
       return String(value);
-    default:
+    }
+    default: {
       return 'null';
+    }
   }
 }
 
@@ -105,7 +109,7 @@ function escapeString(value: string): string {
     return "''";
   }
 
-  const needsQuoting = /[:\-\?\[\]\{\},&\*#\|<>=!%@`]|^\s|\s$|\n/.test(value);
+  const needsQuoting = /[!#%&*,:<=>?@[\]`{|}\-]|^\s|\s$|\n/.test(value);
   if (needsQuoting) {
     return JSON.stringify(value);
   }
@@ -118,4 +122,3 @@ generateOpenApiSpec().catch((error) => {
   console.error('❌ Failed to generate OpenAPI specification', error);
   process.exit(1);
 });
-

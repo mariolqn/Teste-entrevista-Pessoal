@@ -3,15 +3,13 @@
  * Provides cursor-based option endpoints for dropdowns and autocomplete
  */
 
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { OptionsController } from '../controllers/options.controller.js';
 import prisma from '../lib/prisma.js';
 import { OptionsService } from '../services/options/options.service.js';
-import { OptionsController } from '../controllers/options.controller.js';
 
-export async function optionsRoutes(
-  fastify: FastifyInstance,
-  _options: FastifyPluginOptions,
-) {
+import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+
+export async function optionsRoutes(fastify: FastifyInstance, _options: FastifyPluginOptions) {
   const optionsService = new OptionsService(prisma);
   const optionsController = new OptionsController(optionsService);
 
@@ -115,4 +113,3 @@ export async function optionsRoutes(
 
   fastify.log.info('Options routes registered');
 }
-

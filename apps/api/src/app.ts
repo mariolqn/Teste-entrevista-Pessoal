@@ -3,22 +3,25 @@
  * Configures all middleware, plugins, and routes
  */
 
-import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
+import Fastify from 'fastify';
+
 import { config } from './config';
-import { logger } from './utils/logger';
-import { errorHandler, notFoundHandler } from './utils/errors';
 import { connectDatabase, disconnectDatabase } from './lib/prisma';
 import { connectRedis, disconnectRedis } from './lib/redis';
 
 // Import routes
-import { healthRoutes } from './routes/health.routes';
 import { chartRoutes } from './routes/chart.routes';
-import { optionsRoutes } from './routes/options.routes';
 import { dashboardRoutes } from './routes/dashboard.routes';
+import { healthRoutes } from './routes/health.routes';
+import { optionsRoutes } from './routes/options.routes';
+import { errorHandler, notFoundHandler } from './utils/errors';
+import { logger } from './utils/logger';
+
+import type { FastifyInstance, FastifyServerOptions } from 'fastify';
 
 /**
  * Build the Fastify application
@@ -85,11 +88,11 @@ export async function buildApp(): Promise<FastifyInstance> {
     await app.register(rateLimit, {
       max: config.rateLimitMax,
       timeWindow: config.rateLimitWindow,
-      cache: 10000,
+      cache: 10_000,
       allowList: ['127.0.0.1', '::1'], // Whitelist localhost
       redis: config.featureCacheEnabled ? (await import('./lib/redis')).redis : undefined,
       keyGenerator: (request) => {
-        return request.ip + ':' + request.routerPath;
+        return `${request.ip}:${request.routerPath}`;
       },
       errorResponseBuilder: (request, context) => {
         return {
@@ -108,31 +111,37 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.addHook('onRequest', async (request, reply) => {
     // Add request start time
     reply.startTime = Date.now();
-    
+
     // Log incoming request
-    request.log.info({
-      method: request.method,
-      url: request.url,
-      ip: request.ip,
-      userAgent: request.headers['user-agent'],
-    }, 'Incoming request');
+    request.log.info(
+      {
+        method: request.method,
+        url: request.url,
+        ip: request.ip,
+        userAgent: request.headers['user-agent'],
+      },
+      'Incoming request',
+    );
   });
 
   app.addHook('onResponse', async (request, reply) => {
     // Calculate response time
     const responseTime = reply.startTime ? Date.now() - reply.startTime : 0;
-    
+
     // Add response headers
     reply.header('X-Response-Time', `${responseTime}ms`);
     reply.header('X-Request-ID', request.id);
-    
+
     // Log response
-    request.log.info({
-      method: request.method,
-      url: request.url,
-      statusCode: reply.statusCode,
-      responseTime: `${responseTime}ms`,
-    }, 'Request completed');
+    request.log.info(
+      {
+        method: request.method,
+        url: request.url,
+        statusCode: reply.statusCode,
+        responseTime: `${responseTime}ms`,
+      },
+      'Request completed',
+    );
   });
 
   // Validation error handler
@@ -208,15 +217,15 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Graceful shutdown
   const gracefulShutdown = async () => {
     logger.info('⏳ Graceful shutdown initiated...');
-    
+
     try {
       // Close server
       await app.close();
-      
+
       // Disconnect from databases
       await disconnectDatabase();
       await disconnectRedis();
-      
+
       logger.info('✅ Graceful shutdown completed');
       process.exit(0);
     } catch (error) {
@@ -251,19 +260,19 @@ export async function startServer(): Promise<FastifyInstance> {
     // Connect to databases
     await connectDatabase();
     await connectRedis();
-    
+
     // Build app
     const app = await buildApp();
-    
+
     // Start listening
     await app.listen({
       port: config.port,
       host: config.host,
     });
-    
+
     logger.info(`🚀 Server running at http://${config.host}:${config.port}`);
     logger.info(`📚 API Documentation at http://${config.host}:${config.port}/api/docs`);
-    
+
     return app;
   } catch (error) {
     logger.error(error, '❌ Failed to start server');
@@ -433,12 +442,7 @@ function registerGlobalSchemas(app: FastifyInstance) {
         items: {
           type: 'object',
           additionalProperties: {
-            oneOf: [
-              { type: 'string' },
-              { type: 'number' },
-              { type: 'boolean' },
-              { type: 'null' },
-            ],
+            oneOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }, { type: 'null' }],
           },
         },
       },

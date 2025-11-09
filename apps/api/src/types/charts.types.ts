@@ -49,11 +49,15 @@ export const chartParamsSchema = z.object({
 
 export const chartQuerySchema = z
   .object({
-    start: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
-    end: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
-    metric: z
-      .enum(['revenue', 'expense', 'profit', 'quantity', 'count'])
-      .default('revenue'),
+    start: z
+      .string()
+      .datetime()
+      .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+    end: z
+      .string()
+      .datetime()
+      .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+    metric: z.enum(['revenue', 'expense', 'profit', 'quantity', 'count']).default('revenue'),
     groupBy: z
       .enum([
         'day',
@@ -124,11 +128,11 @@ export interface PieChartResponse {
 
 export interface BarChartResponse {
   categories: string[];
-  series: Array<{
+  series: {
     name: string;
     data: number[];
     color?: string;
-  }>;
+  }[];
   metadata?: {
     total?: number;
     average?: number;
@@ -143,9 +147,7 @@ export interface TableColumn {
   align?: 'left' | 'center' | 'right';
 }
 
-export interface TableRow {
-  [key: string]: string | number | boolean | null;
-}
+export type TableRow = Record<string, string | number | boolean | null>;
 
 export interface TableChartResponse {
   columns: TableColumn[];
@@ -164,9 +166,7 @@ export interface KPIValue {
 }
 
 export interface KPIChartResponse {
-  metrics: {
-    [key: string]: KPIValue;
-  };
+  metrics: Record<string, KPIValue>;
   period: {
     current: { start: string; end: string };
     previous?: { start: string; end: string };
@@ -182,38 +182,34 @@ export type ChartResponse =
   | KPIChartResponse;
 
 // Type guards
-export function isLineChartResponse(
-  response: ChartResponse,
-): response is LineChartResponse {
-  return 'series' in response && Array.isArray(response.series)
-    && response.series.length > 0
-    && response.series[0] !== undefined
-    && 'points' in response.series[0];
+export function isLineChartResponse(response: ChartResponse): response is LineChartResponse {
+  return (
+    'series' in response &&
+    Array.isArray(response.series) &&
+    response.series.length > 0 &&
+    response.series[0] !== undefined &&
+    'points' in response.series[0]
+  );
 }
 
-export function isPieChartResponse(
-  response: ChartResponse,
-): response is PieChartResponse {
-  return 'series' in response && Array.isArray(response.series)
-    && response.series.length > 0
-    && response.series[0] !== undefined
-    && 'percentage' in response.series[0];
+export function isPieChartResponse(response: ChartResponse): response is PieChartResponse {
+  return (
+    'series' in response &&
+    Array.isArray(response.series) &&
+    response.series.length > 0 &&
+    response.series[0] !== undefined &&
+    'percentage' in response.series[0]
+  );
 }
 
-export function isBarChartResponse(
-  response: ChartResponse,
-): response is BarChartResponse {
+export function isBarChartResponse(response: ChartResponse): response is BarChartResponse {
   return 'categories' in response && 'series' in response;
 }
 
-export function isTableChartResponse(
-  response: ChartResponse,
-): response is TableChartResponse {
+export function isTableChartResponse(response: ChartResponse): response is TableChartResponse {
   return 'columns' in response && 'rows' in response;
 }
 
-export function isKPIChartResponse(
-  response: ChartResponse,
-): response is KPIChartResponse {
+export function isKPIChartResponse(response: ChartResponse): response is KPIChartResponse {
   return 'metrics' in response && 'period' in response;
 }

@@ -2,7 +2,8 @@
  * Redis client for caching and session management
  */
 
-import Redis from 'ioredis';
+import Redis, { type RedisOptions } from 'ioredis';
+
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
@@ -10,23 +11,17 @@ import { logger } from '../utils/logger';
 const createRedisClient = () => {
   const client = new Redis(config.redisUrl, {
     maxRetriesPerRequest: 3,
-    retryStrategy: (times) => {
-      if (times > 3) {
+    retryStrategy: (retryCount) => {
+      if (retryCount > 3) {
         logger.error('Redis connection failed after 3 retries');
         return null;
       }
-      const delay = Math.min(times * 50, 2000);
-      return delay;
+
+      return Math.min(retryCount * 50, 2000);
     },
-    reconnectOnError: (err) => {
-      const targetError = 'READONLY';
-      if (err.message.includes(targetError)) {
-        return true;
-      }
-      return false;
-    },
+    reconnectOnError: (error) => error.message.includes('READONLY'),
     lazyConnect: true,
-  });
+  } satisfies RedisOptions);
 
   // Event handlers
   client.on('connect', () => {
@@ -38,7 +33,7 @@ const createRedisClient = () => {
   });
 
   client.on('error', (error) => {
-    logger.error(error, '❌ Redis error');
+    logger.error({ err: error }, '❌ Redis error');
   });
 
   client.on('close', () => {
@@ -62,39 +57,39 @@ export class CacheService {
   constructor(prefix: string = config.redisKeyPrefix) {
     this.prefix = prefix.endsWith(':') ? prefix : `${prefix}:`;
   }
-  
+
   /**
    * Get value from cache
    */
-  async get<T = any>(key: string): Promise<T | null> {
+  async get<T>(key: string): Promise<T | null> {
     try {
       const value = await redis.get(this.prefix + key);
-      if (!value) return null;
-      return JSON.parse(value);
+      if (!value) {
+        return null;
+      }
+      return JSON.parse(value) as T;
     } catch (error) {
-      logger.error({ error, key }, 'Cache get error');
+      logger.error({ err: error, key }, 'Cache get error');
       return null;
     }
   }
-  
+
   /**
    * Set value in cache with TTL
    */
-  async set<T = any>(key: string, value: T, ttl: number = config.redisTtl): Promise<boolean> {
+  async set<T>(key: string, value: T, ttl: number = config.redisTtl): Promise<boolean> {
     try {
       const serialized = JSON.stringify(value);
-      if (ttl > 0) {
-        await redis.setex(this.prefix + key, ttl, serialized);
-      } else {
-        await redis.set(this.prefix + key, serialized);
-      }
+      await (ttl > 0
+        ? redis.setex(this.prefix + key, ttl, serialized)
+        : redis.set(this.prefix + key, serialized));
       return true;
     } catch (error) {
-      logger.error({ error, key }, 'Cache set error');
+      logger.error({ err: error, key }, 'Cache set error');
       return false;
     }
   }
-  
+
   /**
    * Delete value from cache
    */
@@ -103,30 +98,32 @@ export class CacheService {
       const result = await redis.del(this.prefix + key);
       return result === 1;
     } catch (error) {
-      logger.error({ error, key }, 'Cache delete error');
+      logger.error({ err: error, key }, 'Cache delete error');
       return false;
     }
   }
-  
+
   /**
    * Delete multiple keys by pattern
    */
   async delByPattern(pattern: string): Promise<number> {
     try {
       const keys = await redis.keys(this.prefix + pattern);
-      if (keys.length === 0) return 0;
-      
+      if (keys.length === 0) {
+        return 0;
+      }
+
       const pipeline = redis.pipeline();
-      keys.forEach(key => pipeline.del(key));
+      keys.forEach((key) => pipeline.del(key));
       await pipeline.exec();
-      
+
       return keys.length;
     } catch (error) {
-      logger.error({ error, pattern }, 'Cache delete by pattern error');
+      logger.error({ err: error, pattern }, 'Cache delete by pattern error');
       return 0;
     }
   }
-  
+
   /**
    * Check if key exists
    */
@@ -135,18 +132,18 @@ export class CacheService {
       const result = await redis.exists(this.prefix + key);
       return result === 1;
     } catch (error) {
-      logger.error({ error, key }, 'Cache exists check error');
+      logger.error({ err: error, key }, 'Cache exists check error');
       return false;
     }
   }
-  
+
   /**
    * Get or set value with factory function
    */
-  async getOrSet<T = any>(
+  async getOrSet<T>(
     key: string,
     factory: () => Promise<T>,
-    ttl: number = config.redisTtl
+    ttl: number = config.redisTtl,
   ): Promise<T> {
     // Try to get from cache first
     const cached = await this.get<T>(key);
@@ -154,32 +151,32 @@ export class CacheService {
       logger.debug({ key }, 'Cache hit');
       return cached;
     }
-    
+
     // Cache miss, get fresh value
     logger.debug({ key }, 'Cache miss');
     const fresh = await factory();
-    
+
     // Store in cache
-    await this.set(key, fresh, ttl);
-    
+    await this.set<T>(key, fresh, ttl);
+
     return fresh;
   }
-  
+
   /**
    * Flush all cache
    */
   async flush(): Promise<boolean> {
     try {
-      const keys = await redis.keys(this.prefix + '*');
+      const keys = await redis.keys(`${this.prefix}*`);
       if (keys.length > 0) {
         const pipeline = redis.pipeline();
-        keys.forEach(key => pipeline.del(key));
+        keys.forEach((key) => pipeline.del(key));
         await pipeline.exec();
       }
-      logger.info(`Flushed ${keys.length} cache entries`);
+      logger.info({ keyCount: keys.length }, 'Flushed cache entries');
       return true;
     } catch (error) {
-      logger.error(error, 'Cache flush error');
+      logger.error({ err: error }, 'Cache flush error');
       return false;
     }
   }
@@ -194,11 +191,11 @@ export async function connectRedis(): Promise<void> {
     logger.info('⏭️  Redis caching is disabled');
     return;
   }
-  
+
   try {
     await redis.connect();
   } catch (error) {
-    logger.error(error, '❌ Failed to connect to Redis');
+    logger.error({ err: error }, '❌ Failed to connect to Redis');
     // Don't throw - Redis is optional for the app to work
     if (config.env === 'production') {
       throw error;
@@ -210,7 +207,7 @@ export async function disconnectRedis(): Promise<void> {
   try {
     await redis.quit();
   } catch (error) {
-    logger.error(error, '❌ Error disconnecting from Redis');
+    logger.error({ err: error }, '❌ Error disconnecting from Redis');
   }
 }
 
@@ -218,7 +215,7 @@ export async function disconnectRedis(): Promise<void> {
 export async function checkRedisHealth(): Promise<boolean> {
   try {
     const result = await redis.ping();
-    return result === 'PONG';
+    return typeof result === 'string' && result.toUpperCase() === 'PONG';
   } catch {
     return false;
   }

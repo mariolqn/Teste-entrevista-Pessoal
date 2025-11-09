@@ -3,18 +3,16 @@
  * Defines all chart-related API endpoints
  */
 
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { ChartController } from '../controllers/chart.controller.js';
-import { ChartService } from '../services/charts/chart.service.js';
 import prisma from '../lib/prisma.js';
+import { ChartService } from '../services/charts/chart.service.js';
+
+import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 
 /**
  * Chart routes plugin
  */
-export async function chartRoutes(
-  fastify: FastifyInstance,
-  _options: FastifyPluginOptions,
-) {
+export async function chartRoutes(fastify: FastifyInstance, _options: FastifyPluginOptions) {
   // Initialize services and controllers
   const chartService = new ChartService(prisma);
   const chartController = new ChartController(chartService);
@@ -26,7 +24,8 @@ export async function chartRoutes(
       schema: {
         tags: ['Charts'],
         summary: 'Fetch chart data',
-        description: 'Retrieve chart-ready data for the requested chart type, respecting the provided date range and filters.',
+        description:
+          'Retrieve chart-ready data for the requested chart type, respecting the provided date range and filters.',
         operationId: 'getChartData',
         security: [],
         params: {
@@ -63,7 +62,17 @@ export async function chartRoutes(
             },
             groupBy: {
               type: 'string',
-              enum: ['day', 'week', 'month', 'quarter', 'year', 'category', 'product', 'customer', 'region'],
+              enum: [
+                'day',
+                'week',
+                'month',
+                'quarter',
+                'year',
+                'category',
+                'product',
+                'customer',
+                'region',
+              ],
               description: 'Primary grouping dimension for aggregations.',
             },
             dimension: {
@@ -74,7 +83,8 @@ export async function chartRoutes(
               type: 'integer',
               minimum: 1,
               maximum: 100,
-              description: 'Restrict the result set to the top N elements by value (pie/bar charts).',
+              description:
+                'Restrict the result set to the top N elements by value (pie/bar charts).',
             },
             cursor: {
               type: 'string',
@@ -134,7 +144,7 @@ export async function chartRoutes(
                     {
                       name: 'Expense',
                       points: [
-                        { x: '2024-01-01', y: 4500.0 },
+                        { x: '2024-01-01', y: 4500 },
                         { x: '2024-01-02', y: 9820.75 },
                       ],
                     },
@@ -145,9 +155,9 @@ export async function chartRoutes(
                 summary: 'Pie chart example',
                 value: {
                   series: [
-                    { label: 'Category A', value: 41954.26, percentage: 55.3 },
+                    { label: 'Category A', value: 41_954.26, percentage: 55.3 },
                     { label: 'Category B', value: 3390.12, percentage: 4.47 },
-                    { label: 'Others', value: 3050.0, percentage: 4.03 },
+                    { label: 'Others', value: 3050, percentage: 4.03 },
                   ],
                 },
               },
@@ -179,7 +189,8 @@ export async function chartRoutes(
     {
       schema: {
         summary: 'Get chart metadata',
-        description: 'Retrieve useful metadata about a chart strategy, including supported metrics and grouping dimensions.',
+        description:
+          'Retrieve useful metadata about a chart strategy, including supported metrics and grouping dimensions.',
         operationId: 'getChartMetadata',
         security: [],
         tags: ['Charts'],
@@ -228,7 +239,8 @@ export async function chartRoutes(
     {
       schema: {
         summary: 'List available charts',
-        description: 'List every chart type supported by the API alongside helper metadata for building UI selectors.',
+        description:
+          'List every chart type supported by the API alongside helper metadata for building UI selectors.',
         operationId: 'listChartTypes',
         security: [],
         tags: ['Charts'],

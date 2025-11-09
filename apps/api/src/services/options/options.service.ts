@@ -3,7 +3,6 @@
  * Provides cursor-based pagination for dropdown/autocomplete entities
  */
 
-import { Prisma, PrismaClient } from '@prisma/client';
 import {
   type OptionsEntity,
   type OptionsQuery,
@@ -12,6 +11,8 @@ import {
 } from '../../types/options.types.js';
 import { decodeCursor, encodeCursor } from '../../utils/cursor.js';
 import { ValidationError } from '../../utils/errors.js';
+
+import type { Prisma, PrismaClient } from '@prisma/client';
 
 interface CursorState {
   id: string;
@@ -27,21 +28,23 @@ export class OptionsService {
   /**
    * Fetch options for the requested entity
    */
-  async getOptions(
-    entity: OptionsEntity,
-    query: OptionsQuery,
-  ): Promise<OptionsResponse> {
+  async getOptions(entity: OptionsEntity, query: OptionsQuery): Promise<OptionsResponse> {
     switch (entity) {
-      case 'categories':
+      case 'categories': {
         return this.getCategoryOptions(query);
-      case 'products':
+      }
+      case 'products': {
         return this.getProductOptions(query);
-      case 'customers':
+      }
+      case 'customers': {
         return this.getCustomerOptions(query);
-      case 'regions':
+      }
+      case 'regions': {
         return this.getRegionOptions(query);
-      default:
+      }
+      default: {
         throw new ValidationError(`Unsupported options entity: ${entity}`);
+      }
     }
   }
 
@@ -57,18 +60,12 @@ export class OptionsService {
     };
 
     if (q) {
-      where.OR = [
-        { name: { contains: q } },
-        { code: { contains: q } },
-      ];
+      where.OR = [{ name: { contains: q } }, { code: { contains: q } }];
     }
 
     const categories = await this.prisma.category.findMany({
       where,
-      orderBy: [
-        { name: 'asc' },
-        { id: 'asc' },
-      ],
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
         name: true,
@@ -116,18 +113,12 @@ export class OptionsService {
     };
 
     if (q) {
-      where.OR = [
-        { name: { contains: q } },
-        { code: { contains: q } },
-      ];
+      where.OR = [{ name: { contains: q } }, { code: { contains: q } }];
     }
 
     const products = await this.prisma.product.findMany({
       where,
-      orderBy: [
-        { name: 'asc' },
-        { id: 'asc' },
-      ],
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
         name: true,
@@ -156,7 +147,7 @@ export class OptionsService {
       metadata: {
         code: product.code,
         categoryId: product.categoryId,
-        categoryName: product.category?.name,
+        categoryName: product.category.name,
       },
     }));
 
@@ -184,18 +175,12 @@ export class OptionsService {
     };
 
     if (q) {
-      where.OR = [
-        { name: { contains: q } },
-        { document: { contains: q } },
-      ];
+      where.OR = [{ name: { contains: q } }, { document: { contains: q } }];
     }
 
     const customers = await this.prisma.customer.findMany({
       where,
-      orderBy: [
-        { name: 'asc' },
-        { id: 'asc' },
-      ],
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
         name: true,
@@ -239,9 +224,7 @@ export class OptionsService {
     const { limit, q, cursor, includeInactive } = query;
     const decodedCursor = this.decodeCursor(cursor);
 
-    const baseConditions: Prisma.CustomerWhereInput[] = [
-      { region: { not: '' } },
-    ];
+    const baseConditions: Prisma.CustomerWhereInput[] = [{ region: { not: '' } }];
 
     if (!includeInactive) {
       baseConditions.push({ isActive: true });
@@ -265,10 +248,7 @@ export class OptionsService {
 
     const paginatedWhere: Prisma.CustomerWhereInput = decodedCursor?.sortValue
       ? {
-          AND: [
-            ...baseAnd,
-            { region: { gt: decodedCursor.sortValue } },
-          ],
+          AND: [...baseAnd, { region: { gt: decodedCursor.sortValue } }],
         }
       : baseWhere;
 
@@ -283,22 +263,18 @@ export class OptionsService {
     const truncatedRegions = regions.slice(0, limit);
     const hasMore = regions.length > limit;
 
-    const regionNames = truncatedRegions
-      .map((entry) => entry.region)
-      .filter((value): value is string => Boolean(value));
+    const regionNames = truncatedRegions.map((entry) => entry.region).filter(Boolean);
 
-    const counts = regionNames.length
-      ? await this.prisma.customer.groupBy({
-          by: ['region'],
-          where: {
-            AND: [
-              ...baseAnd,
-              { region: { in: regionNames } },
-            ],
-          },
-          _count: { _all: true },
-        })
-      : [];
+    const counts =
+      regionNames.length > 0
+        ? await this.prisma.customer.groupBy({
+            by: ['region'],
+            where: {
+              AND: [...baseAnd, { region: { in: regionNames } }],
+            },
+            _count: { _all: true },
+          })
+        : [];
 
     const countMap = new Map<string, number>();
     counts.forEach((entry) => {
@@ -383,4 +359,3 @@ export class OptionsService {
     });
   }
 }
-

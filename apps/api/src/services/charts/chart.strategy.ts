@@ -3,11 +3,8 @@
  * Defines the contract for all chart strategy implementations
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
-import type {
-  ChartRequest,
-  ChartResponse,
-} from '../../types/charts.types.js';
+import type { ChartRequest, ChartResponse } from '../../types/charts.types.js';
+import type { PrismaClient, Prisma } from '@prisma/client';
 
 export interface ChartStrategy {
   /**
@@ -16,10 +13,7 @@ export interface ChartStrategy {
    * @param prisma - Prisma client instance
    * @returns Promise with the chart response data
    */
-  execute(
-    params: ChartRequest,
-    prisma: PrismaClient,
-  ): Promise<ChartResponse>;
+  execute(params: ChartRequest, prisma: PrismaClient): Promise<ChartResponse>;
 
   /**
    * Validate if this strategy can handle the given parameters
@@ -39,10 +33,7 @@ export interface ChartStrategy {
  * Provides common functionality for all chart types
  */
 export abstract class BaseChartStrategy implements ChartStrategy {
-  abstract execute(
-    params: ChartRequest,
-    prisma: PrismaClient,
-  ): Promise<ChartResponse>;
+  abstract execute(params: ChartRequest, prisma: PrismaClient): Promise<ChartResponse>;
 
   abstract canHandle(params: ChartRequest): boolean;
 
@@ -53,8 +44,8 @@ export abstract class BaseChartStrategy implements ChartStrategy {
    */
   protected buildDateFilter(start: string, end: string): Prisma.DateTimeFilter {
     return {
-      gte: new Date(start + 'T00:00:00.000Z'),
-      lte: new Date(end + 'T23:59:59.999Z'),
+      gte: new Date(`${start}T00:00:00.000Z`),
+      lte: new Date(`${end}T23:59:59.999Z`),
     };
   }
 
@@ -133,16 +124,13 @@ export abstract class BaseChartStrategy implements ChartStrategy {
    */
   protected calculatePercentage(value: number, total: number): number {
     if (total === 0) return 0;
-    return Math.round((value / total) * 10000) / 100; // Round to 2 decimal places
+    return Math.round((value / total) * 10_000) / 100; // Round to 2 decimal places
   }
 
   /**
    * Apply topN limit to results if specified
    */
-  protected applyTopN<T extends { value: number }>(
-    items: T[],
-    topN?: number,
-  ): T[] {
+  protected applyTopN<T extends { value: number }>(items: T[], topN?: number): T[] {
     if (!topN || topN >= items.length) return items;
 
     // Sort by value descending and take topN

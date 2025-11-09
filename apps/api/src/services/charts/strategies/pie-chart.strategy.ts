@@ -3,13 +3,10 @@
  * Generates categorical distribution data for pie charts
  */
 
-import { PrismaClient } from '@prisma/client';
 import { BaseChartStrategy } from '../chart.strategy.js';
-import type {
-  ChartRequest,
-  PieChartResponse,
-  PieChartSlice,
-} from '../../../types/charts.types.js';
+
+import type { ChartRequest, PieChartResponse, PieChartSlice } from '../../../types/charts.types.js';
+import type { PrismaClient } from '@prisma/client';
 
 export class PieChartStrategy extends BaseChartStrategy {
   getName(): string {
@@ -20,10 +17,7 @@ export class PieChartStrategy extends BaseChartStrategy {
     return params.chartType === 'pie';
   }
 
-  async execute(
-    params: ChartRequest,
-    prisma: PrismaClient,
-  ): Promise<PieChartResponse> {
+  async execute(params: ChartRequest, prisma: PrismaClient): Promise<PieChartResponse> {
     const { start, end, metric, dimension = 'category', topN } = params;
 
     // Determine what to group by
@@ -38,8 +32,8 @@ export class PieChartStrategy extends BaseChartStrategy {
     // Create WHERE clause conditions
     const whereConditions = [`t.occurred_at >= ? AND t.occurred_at <= ?`];
     const whereParams: any[] = [
-      new Date(start + 'T00:00:00.000Z'),
-      new Date(end + 'T23:59:59.999Z'),
+      new Date(`${start}T00:00:00.000Z`),
+      new Date(`${end}T23:59:59.999Z`),
     ];
 
     if (dimensionFilters['categoryId']) {
@@ -72,15 +66,15 @@ export class PieChartStrategy extends BaseChartStrategy {
     `;
 
     const results = await prisma.$queryRawUnsafe<
-      Array<{
+      {
         label: string;
         group_id: string;
         value: number | bigint;
-      }>
+      }[]
     >(query, ...whereParams);
 
     // Convert bigint to number and calculate total
-    const processedResults = results.map(r => ({
+    const processedResults = results.map((r) => ({
       ...r,
       value: Number(r.value),
     }));
@@ -98,10 +92,10 @@ export class PieChartStrategy extends BaseChartStrategy {
     // Apply topN if specified
     if (topN && topN < slices.length) {
       slices = this.applyTopNToPieSlices(slices, topN);
-      
+
       // Recalculate percentages after grouping
       const newTotal = slices.reduce((sum, slice) => sum + slice.value, 0);
-      slices = slices.map(slice => ({
+      slices = slices.map((slice) => ({
         ...slice,
         percentage: this.calculatePercentage(slice.value, newTotal),
       }));
@@ -161,15 +155,12 @@ export class PieChartStrategy extends BaseChartStrategy {
   /**
    * Apply topN limit specifically for pie slices
    */
-  private applyTopNToPieSlices(
-    slices: PieChartSlice[],
-    topN: number,
-  ): PieChartSlice[] {
+  private applyTopNToPieSlices(slices: PieChartSlice[], topN: number): PieChartSlice[] {
     if (topN >= slices.length) return slices;
 
     // Sort by value descending
     const sorted = [...slices].sort((a, b) => b.value - a.value);
-    
+
     // Take top N
     const top = sorted.slice(0, topN);
     const others = sorted.slice(topN);
@@ -177,10 +168,7 @@ export class PieChartStrategy extends BaseChartStrategy {
     // If there are others, combine them
     if (others.length > 0) {
       const othersSum = others.reduce((sum, slice) => sum + slice.value, 0);
-      const othersPercentage = others.reduce(
-        (sum, slice) => sum + slice.percentage,
-        0,
-      );
+      const othersPercentage = others.reduce((sum, slice) => sum + slice.percentage, 0);
 
       top.push({
         label: 'Outros',

@@ -3,21 +3,19 @@
  * Orchestrates chart strategies to generate dynamic chart data
  */
 
-import { PrismaClient } from '@prisma/client';
-import type {
-  ChartRequest,
-  ChartResponse,
-  ChartTypeEnum,
-} from '../../types/charts.types.js';
-import { ChartStrategy } from './chart.strategy.js';
-import { cacheService } from '../../lib/redis.js';
 import { config } from '../../config/index.js';
+import { cacheService } from '../../lib/redis.js';
+import { logger } from '../../utils/logger.js';
+
+import { BarChartStrategy } from './strategies/bar-chart.strategy.js';
+import { KPIChartStrategy } from './strategies/kpi-chart.strategy.js';
 import { LineChartStrategy } from './strategies/line-chart.strategy.js';
 import { PieChartStrategy } from './strategies/pie-chart.strategy.js';
-import { BarChartStrategy } from './strategies/bar-chart.strategy.js';
 import { TableChartStrategy } from './strategies/table-chart.strategy.js';
-import { KPIChartStrategy } from './strategies/kpi-chart.strategy.js';
-import { logger } from '../../utils/logger.js';
+
+import type { ChartStrategy } from './chart.strategy.js';
+import type { ChartRequest, ChartResponse, ChartTypeEnum } from '../../types/charts.types.js';
+import type { PrismaClient } from '@prisma/client';
 
 export class ChartService {
   private strategies: Map<ChartTypeEnum, ChartStrategy>;
@@ -82,9 +80,9 @@ export class ChartService {
       // Log performance metrics
       const duration = Date.now() - startTime;
       logger.info(
-        { 
-          chartType, 
-          duration, 
+        {
+          chartType,
+          duration,
           resultSize: JSON.stringify(result).length,
         },
         'Chart data generated successfully',
@@ -99,9 +97,9 @@ export class ChartService {
       return result;
     } catch (error) {
       logger.error(
-        { 
-          error, 
-          chartType, 
+        {
+          error,
+          chartType,
           params,
         },
         'Error generating chart data',
@@ -134,9 +132,7 @@ export class ChartService {
 
     // Validate date range is not too large (e.g., max 1 year)
     const maxRangeDays = 365;
-    const rangeDays = Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
+    const rangeDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
     if (rangeDays > maxRangeDays) {
       errors.push(`Date range cannot exceed ${maxRangeDays} days`);
@@ -144,29 +140,38 @@ export class ChartService {
 
     // Validate chart-specific parameters
     switch (params.chartType) {
-      case 'line':
-        if (params.groupBy && !['day', 'week', 'month', 'quarter', 'year', 'category', 'product'].includes(params.groupBy)) {
+      case 'line': {
+        if (
+          params.groupBy &&
+          !['day', 'week', 'month', 'quarter', 'year', 'category', 'product'].includes(
+            params.groupBy,
+          )
+        ) {
           errors.push('Invalid groupBy value for line chart');
         }
         break;
+      }
 
-      case 'pie':
+      case 'pie': {
         if (params.topN && params.topN > 20) {
           errors.push('topN cannot exceed 20 for pie charts');
         }
         break;
+      }
 
-      case 'bar':
+      case 'bar': {
         if (params.topN && params.topN > 50) {
           errors.push('topN cannot exceed 50 for bar charts');
         }
         break;
+      }
 
-      case 'table':
+      case 'table': {
         if (params.limit && params.limit > 100) {
           errors.push('Limit cannot exceed 100 for table data');
         }
         break;
+      }
     }
 
     return errors;
@@ -176,7 +181,7 @@ export class ChartService {
    * Get available chart types
    */
   getAvailableChartTypes(): ChartTypeEnum[] {
-    return Array.from(this.strategies.keys());
+    return [...this.strategies.keys()];
   }
 
   /**
@@ -196,53 +201,67 @@ export class ChartService {
 
     // Return metadata based on chart type
     switch (chartType) {
-      case 'line':
+      case 'line': {
         return {
           name: 'Line Chart',
           supportedMetrics: ['revenue', 'expense', 'profit', 'quantity', 'count'],
           supportedGroupBy: ['day', 'week', 'month', 'quarter', 'year', 'category', 'product'],
           supportsPagination: false,
         };
+      }
 
-      case 'pie':
+      case 'pie': {
         return {
           name: 'Pie Chart',
           supportedMetrics: ['revenue', 'expense', 'profit', 'quantity', 'count'],
           supportedGroupBy: ['category', 'product', 'customer', 'region', 'type', 'status'],
           supportsPagination: false,
         };
+      }
 
-      case 'bar':
+      case 'bar': {
         return {
           name: 'Bar Chart',
           supportedMetrics: ['revenue', 'expense', 'profit', 'quantity', 'count'],
-          supportedGroupBy: ['category', 'product', 'customer', 'region', 'month', 'quarter', 'year'],
+          supportedGroupBy: [
+            'category',
+            'product',
+            'customer',
+            'region',
+            'month',
+            'quarter',
+            'year',
+          ],
           supportsPagination: false,
         };
+      }
 
-      case 'table':
+      case 'table': {
         return {
           name: 'Table',
           supportedMetrics: ['revenue', 'expense', 'profit', 'quantity', 'count'],
           supportedGroupBy: ['transactions', 'category', 'product', 'customer'],
           supportsPagination: true,
         };
+      }
 
-      case 'kpi':
+      case 'kpi': {
         return {
           name: 'KPI',
           supportedMetrics: ['all'],
           supportedGroupBy: [],
           supportsPagination: false,
         };
+      }
 
-      default:
+      default: {
         return {
           name: chartType,
           supportedMetrics: [],
           supportedGroupBy: [],
           supportsPagination: false,
         };
+      }
     }
   }
 

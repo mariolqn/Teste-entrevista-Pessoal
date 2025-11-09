@@ -7,12 +7,7 @@ import { z } from 'zod';
 /**
  * Supported option entities for dropdowns/autocomplete
  */
-export const optionsEntitySchema = z.enum([
-  'categories',
-  'products',
-  'customers',
-  'regions',
-]);
+export const optionsEntitySchema = z.enum(['categories', 'products', 'customers', 'regions']);
 
 /**
  * Path parameters schema
@@ -31,27 +26,16 @@ export const optionsQuerySchema = z.object({
     .min(1, 'Search term must contain at least 1 character')
     .max(100, 'Search term must be at most 100 characters')
     .optional(),
-  limit: z
-    .coerce
+  limit: z.coerce
     .number()
     .int()
     .min(1, 'Limit must be at least 1')
     .max(100, 'Limit must be at most 100')
     .default(20),
-  cursor: z
-    .string()
-    .optional(),
-  includeInactive: z
-    .coerce
-    .boolean()
-    .optional(),
-  categoryId: z
-    .string()
-    .uuid()
-    .optional(),
-  region: z
-    .string()
-    .optional(),
+  cursor: z.string().optional(),
+  includeInactive: z.coerce.boolean().optional(),
+  categoryId: z.string().uuid().optional(),
+  region: z.string().optional(),
 });
 
 export type OptionsEntity = z.infer<typeof optionsEntitySchema>;
@@ -71,4 +55,3 @@ export interface OptionsResponse {
   hasMore: boolean;
   total: number;
 }
-

@@ -10,8 +10,14 @@ import { z } from 'zod';
  */
 export const dashboardSummaryQuerySchema = z
   .object({
-    start: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
-    end: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+    start: z
+      .string()
+      .datetime()
+      .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+    end: z
+      .string()
+      .datetime()
+      .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
     categoryId: z.string().uuid().optional(),
     productId: z.string().uuid().optional(),
     customerId: z.string().uuid().optional(),
@@ -44,4 +50,3 @@ export interface DashboardSummaryResponse {
     generatedAt: string;
   };
 }
-

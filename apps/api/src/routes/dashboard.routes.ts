@@ -3,15 +3,13 @@
  * Provides KPI summary data for dashboard cards.
  */
 
-import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { DashboardController } from '../controllers/dashboard.controller.js';
 import prisma from '../lib/prisma.js';
 import { DashboardService } from '../services/dashboard/dashboard.service.js';
-import { DashboardController } from '../controllers/dashboard.controller.js';
 
-export async function dashboardRoutes(
-  fastify: FastifyInstance,
-  _options: FastifyPluginOptions,
-) {
+import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+
+export async function dashboardRoutes(fastify: FastifyInstance, _options: FastifyPluginOptions) {
   const dashboardService = new DashboardService(prisma);
   const dashboardController = new DashboardController(dashboardService);
 
@@ -67,18 +65,18 @@ export async function dashboardRoutes(
               {
                 summary: 'Summary for April 2024',
                 value: {
-                  totalRevenue: 41954.26,
-                  totalExpense: 67740.79,
-                  liquidProfit: -25786.53,
+                  totalRevenue: 41_954.26,
+                  totalExpense: 67_740.79,
+                  liquidProfit: -25_786.53,
                   overdueAccounts: {
-                    receivable: 7500.0,
-                    payable: 34853.0,
-                    total: 42353.0,
+                    receivable: 7500,
+                    payable: 34_853,
+                    total: 42_353,
                   },
                   upcomingAccounts: {
-                    receivable: 0.0,
-                    payable: 0.0,
-                    total: 0.0,
+                    receivable: 0,
+                    payable: 0,
+                    total: 0,
                   },
                   metadata: {
                     period: {
@@ -109,4 +107,3 @@ export async function dashboardRoutes(
 
   fastify.log.info('Dashboard routes registered');
 }
-

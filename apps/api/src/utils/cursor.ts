@@ -40,8 +40,7 @@ export function decodeCursor(cursor: string): CursorPayload {
     }
 
     return parsed;
-  } catch (_error) {
+  } catch {
     throw new Error('Invalid cursor');
   }
 }
-
