@@ -24,8 +24,11 @@ export async function chartRoutes(
     '/charts/:chartType',
     {
       schema: {
-        description: 'Get chart data dynamically based on chart type',
         tags: ['Charts'],
+        summary: 'Fetch chart data',
+        description: 'Retrieve chart-ready data for the requested chart type, respecting the provided date range and filters.',
+        operationId: 'getChartData',
+        security: [],
         params: {
           type: 'object',
           properties: {
@@ -43,102 +46,124 @@ export async function chartRoutes(
             start: {
               type: 'string',
               format: 'date',
-              description: 'Start date (ISO 8601 format)',
+              description: 'Inclusive start date (YYYY-MM-DD or ISO 8601).',
+              examples: ['2024-01-01'],
             },
             end: {
               type: 'string',
               format: 'date',
-              description: 'End date (ISO 8601 format)',
+              description: 'Inclusive end date (YYYY-MM-DD or ISO 8601).',
+              examples: ['2024-01-31'],
             },
             metric: {
               type: 'string',
               enum: ['revenue', 'expense', 'profit', 'quantity', 'count'],
               default: 'revenue',
-              description: 'Metric to calculate',
+              description: 'Metric to calculate in the chart series.',
             },
             groupBy: {
               type: 'string',
               enum: ['day', 'week', 'month', 'quarter', 'year', 'category', 'product', 'customer', 'region'],
-              description: 'Grouping dimension',
+              description: 'Primary grouping dimension for aggregations.',
             },
             dimension: {
               type: 'string',
-              description: 'Additional dimension filter',
+              description: 'Additional dimension to filter or annotate the result set.',
             },
             topN: {
               type: 'integer',
               minimum: 1,
               maximum: 100,
-              description: 'Limit results to top N items',
+              description: 'Restrict the result set to the top N elements by value (pie/bar charts).',
             },
             cursor: {
               type: 'string',
-              description: 'Pagination cursor for table data',
+              description: 'Opaque pagination cursor for table responses.',
             },
             limit: {
               type: 'integer',
               minimum: 1,
               maximum: 100,
               default: 20,
-              description: 'Page size for paginated results',
+              description: 'Number of rows to return for table responses.',
             },
             categoryId: {
               type: 'string',
               format: 'uuid',
-              description: 'Filter by category ID',
+              description: 'Filter results to a specific category.',
             },
             productId: {
               type: 'string',
               format: 'uuid',
-              description: 'Filter by product ID',
+              description: 'Filter results to a specific product.',
             },
             customerId: {
               type: 'string',
               format: 'uuid',
-              description: 'Filter by customer ID',
+              description: 'Filter results to a specific customer.',
             },
             region: {
               type: 'string',
-              description: 'Filter by region',
+              description: 'Filter results to a specific customer region.',
             },
           },
           required: ['start', 'end'],
         },
         response: {
           200: {
-            description: 'Chart data in format specific to chart type',
-            type: 'object',
-            additionalProperties: true,
+            description: 'Chart payload for the requested type.',
+            oneOf: [
+              { $ref: 'LineChartResponse#' },
+              { $ref: 'BarChartResponse#' },
+              { $ref: 'PieChartResponse#' },
+              { $ref: 'TableChartResponse#' },
+              { $ref: 'KPIChartResponse#' },
+            ],
+            examples: [
+              {
+                summary: 'Line chart example',
+                value: {
+                  series: [
+                    {
+                      name: 'Revenue',
+                      points: [
+                        { x: '2024-01-01', y: 8250.42 },
+                        { x: '2024-01-02', y: 6120.1 },
+                      ],
+                    },
+                    {
+                      name: 'Expense',
+                      points: [
+                        { x: '2024-01-01', y: 4500.0 },
+                        { x: '2024-01-02', y: 9820.75 },
+                      ],
+                    },
+                  ],
+                },
+              },
+              {
+                summary: 'Pie chart example',
+                value: {
+                  series: [
+                    { label: 'Category A', value: 41954.26, percentage: 55.3 },
+                    { label: 'Category B', value: 3390.12, percentage: 4.47 },
+                    { label: 'Others', value: 3050.0, percentage: 4.03 },
+                  ],
+                },
+              },
+            ],
           },
           304: {
             description: 'Not Modified - client has fresh data',
             type: 'null',
           },
           400: {
-            description: 'Bad Request - validation error',
-            type: 'object',
-            properties: {
-              type: { type: 'string' },
-              title: { type: 'string' },
-              status: { type: 'integer' },
-              detail: { type: 'string' },
-              instance: { type: 'string' },
-              errors: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-            },
+            description: 'Validation error',
+            $ref: 'ProblemDetails#',
           },
           500: {
-            description: 'Internal Server Error',
-            type: 'object',
-            properties: {
-              type: { type: 'string' },
-              title: { type: 'string' },
-              status: { type: 'integer' },
-              detail: { type: 'string' },
-              instance: { type: 'string' },
-            },
+            description: 'Unexpected server error',
+            $ref: 'ProblemDetails#',
           },
         },
       },
@@ -153,7 +178,10 @@ export async function chartRoutes(
     '/charts/:chartType/metadata',
     {
       schema: {
-        description: 'Get metadata about a specific chart type',
+        summary: 'Get chart metadata',
+        description: 'Retrieve useful metadata about a chart strategy, including supported metrics and grouping dimensions.',
+        operationId: 'getChartMetadata',
+        security: [],
         tags: ['Charts'],
         params: {
           type: 'object',
@@ -184,18 +212,7 @@ export async function chartRoutes(
           },
           404: {
             description: 'Chart type not found',
-            type: 'object',
-            properties: {
-              type: { type: 'string' },
-              title: { type: 'string' },
-              status: { type: 'integer' },
-              detail: { type: 'string' },
-              instance: { type: 'string' },
-              validTypes: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-            },
+            $ref: 'ProblemDetails#',
           },
         },
       },
@@ -210,7 +227,10 @@ export async function chartRoutes(
     '/charts/types',
     {
       schema: {
-        description: 'Get all available chart types with metadata',
+        summary: 'List available charts',
+        description: 'List every chart type supported by the API alongside helper metadata for building UI selectors.',
+        operationId: 'listChartTypes',
+        security: [],
         tags: ['Charts'],
         response: {
           200: {
@@ -243,6 +263,10 @@ export async function chartRoutes(
                 },
               },
             },
+          },
+          500: {
+            description: 'Unexpected server error',
+            $ref: 'ProblemDetails#',
           },
         },
       },

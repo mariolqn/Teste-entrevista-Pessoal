@@ -36,6 +36,7 @@
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
     "prisma:reset": "run-s prisma:migrate:reset prisma:seed",
+    "swagger:generate": "tsx scripts/generate-openapi.ts",
     "clean": "rimraf dist coverage .turbo"
   },
   "dependencies": {

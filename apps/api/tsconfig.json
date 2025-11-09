@@ -16,7 +16,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
   },
-  "include": ["src/**/*", "prisma/**/*"],
+  "include": ["src/**/*", "prisma/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist", "coverage", "tests"],
   "ts-node": {
     "require": ["tsconfig-paths/register"]

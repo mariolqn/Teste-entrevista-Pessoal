@@ -54,15 +54,14 @@ export class OptionsService {
 
     const where: Prisma.CategoryWhereInput = {
       ...(includeInactive ? {} : { isActive: true }),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { code: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
     };
+
+    if (q) {
+      where.OR = [
+        { name: { contains: q } },
+        { code: { contains: q } },
+      ];
+    }
 
     const categories = await this.prisma.category.findMany({
       where,
@@ -99,8 +98,8 @@ export class OptionsService {
     return {
       items,
       hasMore,
-      nextCursor,
       total,
+      ...(nextCursor ? { nextCursor } : {}),
     };
   }
 
@@ -114,15 +113,14 @@ export class OptionsService {
     const where: Prisma.ProductWhereInput = {
       ...(includeInactive ? {} : { isActive: true }),
       ...(categoryId ? { categoryId } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { code: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
     };
+
+    if (q) {
+      where.OR = [
+        { name: { contains: q } },
+        { code: { contains: q } },
+      ];
+    }
 
     const products = await this.prisma.product.findMany({
       where,
@@ -168,8 +166,8 @@ export class OptionsService {
     return {
       items,
       hasMore,
-      nextCursor,
       total,
+      ...(nextCursor ? { nextCursor } : {}),
     };
   }
 
@@ -183,15 +181,14 @@ export class OptionsService {
     const where: Prisma.CustomerWhereInput = {
       ...(includeInactive ? {} : { isActive: true }),
       ...(region ? { region } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { document: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
     };
+
+    if (q) {
+      where.OR = [
+        { name: { contains: q } },
+        { document: { contains: q } },
+      ];
+    }
 
     const customers = await this.prisma.customer.findMany({
       where,
@@ -230,8 +227,8 @@ export class OptionsService {
     return {
       items,
       hasMore,
-      nextCursor,
       total,
+      ...(nextCursor ? { nextCursor } : {}),
     };
   }
 
@@ -243,7 +240,6 @@ export class OptionsService {
     const decodedCursor = this.decodeCursor(cursor);
 
     const baseConditions: Prisma.CustomerWhereInput[] = [
-      { region: { not: null } },
       { region: { not: '' } },
     ];
 
@@ -252,67 +248,90 @@ export class OptionsService {
     }
 
     if (q) {
-      baseConditions.push({
-        region: { contains: q, mode: 'insensitive' },
-      });
+      baseConditions.push({ region: { contains: q } });
     }
 
-    const where: Prisma.CustomerWhereInput = {
-      AND: baseConditions,
-    };
+    const baseWhere: Prisma.CustomerWhereInput =
+      baseConditions.length > 0 ? { AND: baseConditions } : {};
 
-    const regions = await this.prisma.customer.groupBy({
-      by: ['region'],
-      where,
-      orderBy: {
-        region: 'asc',
-      },
+    const baseAnd: Prisma.CustomerWhereInput[] = [];
+    if (baseWhere.AND) {
+      if (Array.isArray(baseWhere.AND)) {
+        baseAnd.push(...baseWhere.AND);
+      } else {
+        baseAnd.push(baseWhere.AND);
+      }
+    }
+
+    const paginatedWhere: Prisma.CustomerWhereInput = decodedCursor?.sortValue
+      ? {
+          AND: [
+            ...baseAnd,
+            { region: { gt: decodedCursor.sortValue } },
+          ],
+        }
+      : baseWhere;
+
+    const regions = await this.prisma.customer.findMany({
+      where: paginatedWhere,
+      select: { region: true },
+      orderBy: { region: 'asc' },
+      distinct: ['region'],
       take: limit + 1,
-      ...(decodedCursor?.sortValue
-        ? {
-            cursor: { region: decodedCursor.sortValue },
-            skip: 1,
-          }
-        : {}),
-      _count: {
-        _all: true,
-      },
     });
 
     const truncatedRegions = regions.slice(0, limit);
     const hasMore = regions.length > limit;
 
-    const items: OptionItem[] = truncatedRegions.map((regionGroup) => {
-      const regionName = regionGroup.region ?? '';
+    const regionNames = truncatedRegions
+      .map((entry) => entry.region)
+      .filter((value): value is string => Boolean(value));
 
+    const counts = regionNames.length
+      ? await this.prisma.customer.groupBy({
+          by: ['region'],
+          where: {
+            AND: [
+              ...baseAnd,
+              { region: { in: regionNames } },
+            ],
+          },
+          _count: { _all: true },
+        })
+      : [];
+
+    const countMap = new Map<string, number>();
+    counts.forEach((entry) => {
+      if (entry.region) {
+        countMap.set(entry.region, entry._count._all);
+      }
+    });
+
+    const items: OptionItem[] = truncatedRegions.map((entry) => {
+      const regionName = entry.region ?? '';
       return {
         id: regionName,
         label: regionName,
         value: regionName,
         metadata: {
-          customerCount: regionGroup._count._all,
+          customerCount: countMap.get(regionName) ?? 0,
         },
       };
     });
 
-    const nextCursor = hasMore && items.length > 0
-      ? encodeCursor({
-          id: items[items.length - 1].id,
-          sortValue: items[items.length - 1].label,
-        })
-      : undefined;
+    const nextCursor = this.buildNextCursor(items, hasMore);
 
-    const totalRegions = await this.prisma.customer.findMany({
-      where,
-      distinct: ['region'],
-      select: { region: true },
+    const totalRegions = await this.prisma.customer.groupBy({
+      by: ['region'],
+      where: baseWhere,
+      _count: { _all: true },
     });
 
     return {
       items,
       hasMore,
-      nextCursor,
       total: totalRegions.length,
+      ...(nextCursor ? { nextCursor } : {}),
     };
   }
 
@@ -353,7 +372,11 @@ export class OptionsService {
       return undefined;
     }
 
-    const lastItem = items[items.length - 1];
+    const lastItem = items.at(-1);
+    if (!lastItem) {
+      return undefined;
+    }
+
     return encodeCursor({
       id: lastItem.id,
       sortValue: lastItem.label,

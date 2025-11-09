@@ -18,6 +18,7 @@ import { connectRedis, disconnectRedis } from './lib/redis';
 import { healthRoutes } from './routes/health.routes';
 import { chartRoutes } from './routes/chart.routes';
 import { optionsRoutes } from './routes/options.routes';
+import { dashboardRoutes } from './routes/dashboard.routes';
 
 /**
  * Build the Fastify application
@@ -41,6 +42,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   };
 
   const app = Fastify(fastifyOptions);
+
+  // Register shared schemas for OpenAPI
+  registerGlobalSchemas(app);
 
   // Register error handlers
   app.setErrorHandler(errorHandler as any);
@@ -137,41 +141,53 @@ export async function buildApp(): Promise<FastifyInstance> {
     return new Error(`${dataVar}${error?.instancePath} ${error?.message}`);
   });
 
-  // Register routes
-  await app.register(healthRoutes, { prefix: '/api/v1' });
-  await app.register(chartRoutes, { prefix: '/api/v1' });
-  await app.register(optionsRoutes, { prefix: '/api/v1' });
+  // Swagger / OpenAPI documentation
+  const shouldRegisterSwagger =
+    config.featureSwaggerEnabled || process.env['SWAGGER_GENERATE'] === 'true';
 
-  // Swagger documentation
-  if (config.featureSwaggerEnabled && config.env !== 'production') {
-    await app.register(import('@fastify/swagger'), {
-      swagger: {
+  if (shouldRegisterSwagger) {
+    const swaggerPlugin = await import('@fastify/swagger');
+    await app.register(swaggerPlugin.default ?? (swaggerPlugin as any), {
+      openapi: {
         info: {
-          title: 'Dashboard API',
-          description: 'Dynamic Dashboard REST API with chart endpoints',
+          title: 'Dynamic Dashboard API',
+          description:
+            'REST API powering the financial dashboard with dynamic chart data, KPI summaries, and cursor-based option lists.',
           version: '1.0.0',
+          contact: {
+            name: 'Dashboard Platform Team',
+            email: 'engineering@example.com',
+          },
         },
-        host: `localhost:${config.port}`,
-        schemes: ['http', 'https'],
-        consumes: ['application/json'],
-        produces: ['application/json'],
-        tags: [
-          { name: 'Health', description: 'Health check endpoints' },
-          { name: 'Charts', description: 'Dynamic chart data endpoints' },
-          { name: 'Options', description: 'Options endpoints for dropdowns' },
-          { name: 'Dashboard', description: 'Dashboard summary endpoints' },
+        servers: [
+          {
+            url: `http://${config.host}:${config.port}${config.apiPrefix}`,
+            description: 'Local development',
+          },
         ],
-        securityDefinitions: {
-          Bearer: {
-            type: 'apiKey',
-            name: 'Authorization',
-            in: 'header',
+        tags: [
+          { name: 'Health', description: 'Service health and readiness' },
+          { name: 'Charts', description: 'Dynamic chart data endpoints' },
+          { name: 'Options', description: 'Option lists for selectors' },
+          { name: 'Dashboard', description: 'Dashboard KPI summaries' },
+        ],
+        components: {
+          securitySchemes: {
+            BearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+              description:
+                'Provide a valid JWT access token using the `Authorization: Bearer <token>` header.',
+            },
           },
         },
       },
+      hideUntagged: true,
     });
 
-    await app.register(import('@fastify/swagger-ui'), {
+    const swaggerUi = await import('@fastify/swagger-ui');
+    await app.register(swaggerUi.default ?? (swaggerUi as any), {
       routePrefix: '/api/docs',
       uiConfig: {
         docExpansion: 'list',
@@ -182,6 +198,12 @@ export async function buildApp(): Promise<FastifyInstance> {
       transformStaticCSP: (header) => header,
     });
   }
+
+  // Register routes
+  await app.register(healthRoutes, { prefix: '/api/v1' });
+  await app.register(chartRoutes, { prefix: '/api/v1' });
+  await app.register(optionsRoutes, { prefix: '/api/v1' });
+  await app.register(dashboardRoutes, { prefix: '/api/v1' });
 
   // Graceful shutdown
   const gracefulShutdown = async () => {
@@ -254,4 +276,298 @@ declare module 'fastify' {
   interface FastifyReply {
     startTime?: number;
   }
+}
+
+/**
+ * Register global reusable schemas for OpenAPI generation.
+ */
+function registerGlobalSchemas(app: FastifyInstance) {
+  app.addSchema({
+    $id: 'ProblemDetails',
+    type: 'object',
+    additionalProperties: false,
+    required: ['type', 'title', 'status', 'detail', 'instance'],
+    properties: {
+      type: { type: 'string', format: 'uri' },
+      title: { type: 'string' },
+      status: { type: 'integer', minimum: 100, maximum: 599 },
+      detail: { type: 'string' },
+      instance: { type: 'string' },
+      errors: {
+        type: 'object',
+        additionalProperties: true,
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: 'LineChartResponse',
+    type: 'object',
+    required: ['series'],
+    properties: {
+      series: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['name', 'points'],
+          properties: {
+            name: { type: 'string' },
+            color: { type: 'string' },
+            points: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['x', 'y'],
+                properties: {
+                  x: { type: 'string' },
+                  y: { type: 'number' },
+                },
+              },
+            },
+          },
+        },
+      },
+      metadata: {
+        type: 'object',
+        nullable: true,
+        additionalProperties: false,
+        properties: {
+          total: { type: 'number' },
+          average: { type: 'number' },
+          min: { type: 'number' },
+          max: { type: 'number' },
+        },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: 'PieChartResponse',
+    type: 'object',
+    required: ['series'],
+    properties: {
+      series: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['label', 'value', 'percentage'],
+          properties: {
+            label: { type: 'string' },
+            value: { type: 'number' },
+            percentage: { type: 'number' },
+            color: { type: 'string' },
+          },
+        },
+      },
+      metadata: {
+        type: 'object',
+        nullable: true,
+        additionalProperties: false,
+        properties: {
+          total: { type: 'number' },
+        },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: 'BarChartResponse',
+    type: 'object',
+    required: ['categories', 'series'],
+    properties: {
+      categories: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      series: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['name', 'data'],
+          properties: {
+            name: { type: 'string' },
+            color: { type: 'string' },
+            data: {
+              type: 'array',
+              items: { type: 'number' },
+            },
+          },
+        },
+      },
+      metadata: {
+        type: 'object',
+        nullable: true,
+        additionalProperties: false,
+        properties: {
+          total: { type: 'number' },
+          average: { type: 'number' },
+        },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: 'TableChartResponse',
+    type: 'object',
+    required: ['columns', 'rows'],
+    properties: {
+      columns: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['key', 'label', 'type'],
+          properties: {
+            key: { type: 'string' },
+            label: { type: 'string' },
+            type: {
+              type: 'string',
+              enum: ['string', 'number', 'date', 'currency', 'percentage'],
+            },
+            sortable: { type: 'boolean' },
+            align: { type: 'string', enum: ['left', 'center', 'right'] },
+          },
+        },
+      },
+      rows: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: {
+            oneOf: [
+              { type: 'string' },
+              { type: 'number' },
+              { type: 'boolean' },
+              { type: 'null' },
+            ],
+          },
+        },
+      },
+      cursor: { type: 'string', nullable: true },
+      hasMore: { type: 'boolean', nullable: true },
+      total: { type: 'integer', nullable: true },
+    },
+  });
+
+  app.addSchema({
+    $id: 'KPIChartResponse',
+    type: 'object',
+    required: ['metrics', 'period'],
+    properties: {
+      metrics: {
+        type: 'object',
+        additionalProperties: {
+          type: 'object',
+          required: ['current', 'trend'],
+          properties: {
+            current: { type: 'number' },
+            previous: { type: 'number', nullable: true },
+            change: { type: 'number', nullable: true },
+            changePercentage: { type: 'number', nullable: true },
+            trend: { type: 'string', enum: ['up', 'down', 'stable'] },
+          },
+        },
+      },
+      period: {
+        type: 'object',
+        required: ['current'],
+        properties: {
+          current: {
+            type: 'object',
+            required: ['start', 'end'],
+            properties: {
+              start: { type: 'string' },
+              end: { type: 'string' },
+            },
+          },
+          previous: {
+            type: 'object',
+            nullable: true,
+            required: ['start', 'end'],
+            properties: {
+              start: { type: 'string' },
+              end: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  app.addSchema({
+    $id: 'OptionsItem',
+    type: 'object',
+    required: ['id', 'label', 'value'],
+    properties: {
+      id: { type: 'string' },
+      label: { type: 'string' },
+      value: { type: 'string' },
+      metadata: { type: 'object', additionalProperties: true, nullable: true },
+    },
+  });
+
+  app.addSchema({
+    $id: 'OptionsResponse',
+    type: 'object',
+    required: ['items', 'hasMore', 'total'],
+    properties: {
+      items: {
+        type: 'array',
+        items: { $ref: 'OptionsItem#' },
+      },
+      nextCursor: { type: 'string', nullable: true },
+      hasMore: { type: 'boolean' },
+      total: { type: 'integer' },
+    },
+  });
+
+  app.addSchema({
+    $id: 'DashboardSummaryResponse',
+    type: 'object',
+    required: [
+      'totalRevenue',
+      'totalExpense',
+      'liquidProfit',
+      'overdueAccounts',
+      'upcomingAccounts',
+      'metadata',
+    ],
+    properties: {
+      totalRevenue: { type: 'number' },
+      totalExpense: { type: 'number' },
+      liquidProfit: { type: 'number' },
+      overdueAccounts: {
+        type: 'object',
+        required: ['receivable', 'payable', 'total'],
+        properties: {
+          receivable: { type: 'number' },
+          payable: { type: 'number' },
+          total: { type: 'number' },
+        },
+      },
+      upcomingAccounts: {
+        type: 'object',
+        required: ['receivable', 'payable', 'total'],
+        properties: {
+          receivable: { type: 'number' },
+          payable: { type: 'number' },
+          total: { type: 'number' },
+        },
+      },
+      metadata: {
+        type: 'object',
+        required: ['period', 'generatedAt'],
+        properties: {
+          period: {
+            type: 'object',
+            required: ['start', 'end'],
+            properties: {
+              start: { type: 'string' },
+              end: { type: 'string' },
+            },
+          },
+          generatedAt: { type: 'string' },
+        },
+      },
+    },
+  });
 }

@@ -27,6 +27,7 @@ const configSchema = z.object({
   // Redis
   redisUrl: z.string().startsWith('redis://').optional().default('redis://localhost:6379'),
   redisTtl: z.coerce.number().min(0).default(300),
+  redisKeyPrefix: z.string().optional().default('dashboard:'),
   
   // CORS
   corsOrigin: z.string().or(z.array(z.string())).default('http://localhost:5173'),
@@ -74,6 +75,7 @@ const parseConfig = () => {
     // Redis
     redisUrl: process.env['REDIS_URL'],
     redisTtl: process.env['REDIS_TTL'],
+    redisKeyPrefix: process.env['REDIS_KEY_PREFIX'],
     
     // CORS
     corsOrigin: process.env['CORS_ORIGIN']?.includes(',') 

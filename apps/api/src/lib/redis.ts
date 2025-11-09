@@ -57,7 +57,11 @@ export const redis = createRedisClient();
 
 // Cache utilities
 export class CacheService {
-  private prefix: string = 'dashboard:';
+  private readonly prefix: string;
+
+  constructor(prefix: string = config.redisKeyPrefix) {
+    this.prefix = prefix.endsWith(':') ? prefix : `${prefix}:`;
+  }
   
   /**
    * Get value from cache
@@ -182,7 +186,7 @@ export class CacheService {
 }
 
 // Export singleton cache service
-export const cacheService = new CacheService();
+export const cacheService = new CacheService(config.redisKeyPrefix);
 
 // Connection management
 export async function connectRedis(): Promise<void> {

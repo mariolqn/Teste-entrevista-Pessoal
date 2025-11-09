@@ -10,6 +10,8 @@ import type {
   ChartTypeEnum,
 } from '../../types/charts.types.js';
 import { ChartStrategy } from './chart.strategy.js';
+import { cacheService } from '../../lib/redis.js';
+import { config } from '../../config/index.js';
 import { LineChartStrategy } from './strategies/line-chart.strategy.js';
 import { PieChartStrategy } from './strategies/pie-chart.strategy.js';
 import { BarChartStrategy } from './strategies/bar-chart.strategy.js';
@@ -61,6 +63,18 @@ export class ChartService {
       throw new Error(`Strategy ${strategy.getName()} cannot handle request`);
     }
 
+    const cacheKey = this.buildCacheKey(params);
+
+    if (config.featureCacheEnabled) {
+      const cached = await cacheService.get<ChartResponse>(cacheKey);
+      if (cached) {
+        logger.debug({ chartType, cacheKey }, 'Chart cache hit');
+        return cached;
+      }
+
+      logger.debug({ chartType, cacheKey }, 'Chart cache miss');
+    }
+
     try {
       // Execute strategy
       const result = await strategy.execute(params, this.prisma);
@@ -75,6 +89,12 @@ export class ChartService {
         },
         'Chart data generated successfully',
       );
+
+      if (config.featureCacheEnabled) {
+        const ttl = this.getCacheTtl(chartType);
+        await cacheService.set(cacheKey, result, ttl);
+        logger.debug({ chartType, cacheKey, ttl }, 'Chart cache populated');
+      }
 
       return result;
     } catch (error) {
@@ -224,5 +244,26 @@ export class ChartService {
           supportsPagination: false,
         };
     }
+  }
+
+  private buildCacheKey(params: ChartRequest): string {
+    const sortedEntries = Object.entries(params)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    const serialized = sortedEntries.map(([key, value]) => `${key}:${value}`).join('|');
+    return `chart:${params.chartType}:${serialized}`;
+  }
+
+  private getCacheTtl(chartType: ChartTypeEnum): number {
+    if (chartType === 'kpi') {
+      return Math.min(30, config.redisTtl);
+    }
+
+    if (chartType === 'table') {
+      return Math.min(60, config.redisTtl);
+    }
+
+    return config.redisTtl;
   }
 }

@@ -21,7 +21,9 @@ export async function optionsRoutes(
       schema: {
         description: 'Retrieve options for dropdowns with cursor-based pagination',
         summary: 'Get options',
+        operationId: 'listOptions',
         tags: ['Options'],
+        security: [],
         params: {
           type: 'object',
           properties: {
@@ -71,44 +73,37 @@ export async function optionsRoutes(
         response: {
           200: {
             description: 'Options response',
-            type: 'object',
-            properties: {
-              items: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    label: { type: 'string' },
-                    value: { type: 'string' },
-                    metadata: { type: 'object', additionalProperties: true },
-                  },
+            $ref: 'OptionsResponse#',
+            examples: [
+              {
+                summary: 'Paginated option list',
+                value: {
+                  items: [
+                    {
+                      id: 'e8f1f2d1-6f9d-4e64-9ac9-7cb6f9d0d942',
+                      label: 'Suzano Transporte Florestal',
+                      value: 'e8f1f2d1-6f9d-4e64-9ac9-7cb6f9d0d942',
+                    },
+                    {
+                      id: 'c2a3f5e0-7d88-4f78-8c19-43ab47f1f9b7',
+                      label: 'Transporte de Agregados Itabira MG',
+                      value: 'c2a3f5e0-7d88-4f78-8c19-43ab47f1f9b7',
+                    },
+                  ],
+                  nextCursor: 'eyJpZCI6ImMyYTNmNWUwLTdkODgtNGY3OC04YzE5LTQzYWI0N2YxZjliNyJ9',
+                  hasMore: true,
+                  total: 42,
                 },
               },
-              nextCursor: {
-                type: 'string',
-                nullable: true,
-                description: 'Cursor for the next page, if available',
-              },
-              hasMore: {
-                type: 'boolean',
-              },
-              total: {
-                type: 'integer',
-                description: 'Total number of available items matching the filter',
-              },
-            },
+            ],
           },
           400: {
             description: 'Validation error',
-            type: 'object',
-            properties: {
-              type: { type: 'string' },
-              title: { type: 'string' },
-              status: { type: 'integer' },
-              detail: { type: 'string' },
-              errors: { type: 'object', additionalProperties: true },
-            },
+            $ref: 'ProblemDetails#',
+          },
+          500: {
+            description: 'Unexpected server error',
+            $ref: 'ProblemDetails#',
           },
         },
       },

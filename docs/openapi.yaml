@@ -1,0 +1,1039 @@
+openapi: 3.0.3
+info:
+  title: Dynamic Dashboard API
+  description: "REST API powering the financial dashboard with dynamic chart data, KPI summaries, and cursor-based option lists."
+  version: 1.0.0
+  contact:
+    name: Dashboard Platform Team
+    email: "engineering@example.com"
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Provide a valid JWT access token using the `Authorization: Bearer <token>` header."
+  schemas:
+    "def-0":
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - instance
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: object
+          additionalProperties: true
+      title: ProblemDetails
+    "def-1":
+      type: object
+      required:
+        - series
+      properties:
+        series:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - points
+            properties:
+              name:
+                type: string
+              color:
+                type: string
+              points:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - x
+                    - y
+                  properties:
+                    x:
+                      type: string
+                    y:
+                      type: number
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: false
+          properties:
+            total:
+              type: number
+            average:
+              type: number
+            min:
+              type: number
+            max:
+              type: number
+      title: LineChartResponse
+    "def-2":
+      type: object
+      required:
+        - series
+      properties:
+        series:
+          type: array
+          items:
+            type: object
+            required:
+              - label
+              - value
+              - percentage
+            properties:
+              label:
+                type: string
+              value:
+                type: number
+              percentage:
+                type: number
+              color:
+                type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: false
+          properties:
+            total:
+              type: number
+      title: PieChartResponse
+    "def-3":
+      type: object
+      required:
+        - categories
+        - series
+      properties:
+        categories:
+          type: array
+          items:
+            type: string
+        series:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - data
+            properties:
+              name:
+                type: string
+              color:
+                type: string
+              data:
+                type: array
+                items:
+                  type: number
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: false
+          properties:
+            total:
+              type: number
+            average:
+              type: number
+      title: BarChartResponse
+    "def-4":
+      type: object
+      required:
+        - columns
+        - rows
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            required:
+              - key
+              - label
+              - type
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              type:
+                type: string
+                enum:
+                  - string
+                  - number
+                  - date
+                  - currency
+                  - percentage
+              sortable:
+                type: boolean
+              align:
+                type: string
+                enum:
+                  - left
+                  - center
+                  - right
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              oneOf:
+                -
+                  type: string
+                -
+                  type: number
+                -
+                  type: boolean
+                -
+                  type: null
+        cursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+          nullable: true
+        total:
+          type: integer
+          nullable: true
+      title: TableChartResponse
+    "def-5":
+      type: object
+      required:
+        - metrics
+        - period
+      properties:
+        metrics:
+          type: object
+          additionalProperties:
+            type: object
+            required:
+              - current
+              - trend
+            properties:
+              current:
+                type: number
+              previous:
+                type: number
+                nullable: true
+              change:
+                type: number
+                nullable: true
+              changePercentage:
+                type: number
+                nullable: true
+              trend:
+                type: string
+                enum:
+                  - up
+                  - down
+                  - stable
+        period:
+          type: object
+          required:
+            - current
+          properties:
+            current:
+              type: object
+              required:
+                - start
+                - end
+              properties:
+                start:
+                  type: string
+                end:
+                  type: string
+            previous:
+              type: object
+              nullable: true
+              required:
+                - start
+                - end
+              properties:
+                start:
+                  type: string
+                end:
+                  type: string
+      title: KPIChartResponse
+    "def-6":
+      type: object
+      required:
+        - id
+        - label
+        - value
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        value:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+      title: OptionsItem
+    "def-7":
+      type: object
+      required:
+        - items
+        - hasMore
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/def-6"
+        nextCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+        total:
+          type: integer
+      title: OptionsResponse
+    "def-8":
+      type: object
+      required:
+        - totalRevenue
+        - totalExpense
+        - liquidProfit
+        - overdueAccounts
+        - upcomingAccounts
+        - metadata
+      properties:
+        totalRevenue:
+          type: number
+        totalExpense:
+          type: number
+        liquidProfit:
+          type: number
+        overdueAccounts:
+          type: object
+          required:
+            - receivable
+            - payable
+            - total
+          properties:
+            receivable:
+              type: number
+            payable:
+              type: number
+            total:
+              type: number
+        upcomingAccounts:
+          type: object
+          required:
+            - receivable
+            - payable
+            - total
+          properties:
+            receivable:
+              type: number
+            payable:
+              type: number
+            total:
+              type: number
+        metadata:
+          type: object
+          required:
+            - period
+            - generatedAt
+          properties:
+            period:
+              type: object
+              required:
+                - start
+                - end
+              properties:
+                start:
+                  type: string
+                end:
+                  type: string
+            generatedAt:
+              type: string
+      title: DashboardSummaryResponse
+paths:
+  /healthz:
+    get:
+      tags:
+        - Health
+      description: Basic health check endpoint
+      responses:
+        200:
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                  uptime:
+                    type: number
+                  version:
+                    type: string
+  /livez:
+    get:
+      tags:
+        - Health
+      description: Liveness probe for Kubernetes
+      responses:
+        200:
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        503:
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /readyz:
+    get:
+      tags:
+        - Health
+      description: Readiness probe for Kubernetes
+      responses:
+        200:
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                      redis:
+                        type: string
+        503:
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                      redis:
+                        type: string
+  /health:
+    get:
+      tags:
+        - Health
+      description: Detailed health check with system metrics
+      responses:
+        200:
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                  uptime:
+                    type: number
+                  version:
+                    type: string
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          responseTime:
+                            type: number
+                      redis:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          responseTime:
+                            type: number
+                  system:
+                    type: object
+                    properties:
+                      memory:
+                        type: object
+                        properties:
+                          used:
+                            type: number
+                          total:
+                            type: number
+                          percentage:
+                            type: number
+                      cpu:
+                        type: object
+                        properties:
+                          usage:
+                            type: number
+                          count:
+                            type: number
+                      process:
+                        type: object
+                        properties:
+                          pid:
+                            type: number
+                          version:
+                            type: string
+                          uptime:
+                            type: number
+  "/charts/{chartType}":
+    get:
+      operationId: getChartData
+      summary: Fetch chart data
+      tags:
+        - Charts
+      description: "Retrieve chart-ready data for the requested chart type, respecting the provided date range and filters."
+      parameters:
+        -
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+          in: query
+          name: start
+          required: true
+          description: "Inclusive start date (YYYY-MM-DD or ISO 8601)."
+        -
+          schema:
+            type: string
+            format: date
+          example: "2024-01-31"
+          in: query
+          name: end
+          required: true
+          description: "Inclusive end date (YYYY-MM-DD or ISO 8601)."
+        -
+          schema:
+            type: string
+            enum:
+              - revenue
+              - expense
+              - profit
+              - quantity
+              - count
+            default: revenue
+          in: query
+          name: metric
+          required: false
+          description: Metric to calculate in the chart series.
+        -
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+              - quarter
+              - year
+              - category
+              - product
+              - customer
+              - region
+          in: query
+          name: groupBy
+          required: false
+          description: Primary grouping dimension for aggregations.
+        -
+          schema:
+            type: string
+          in: query
+          name: dimension
+          required: false
+          description: Additional dimension to filter or annotate the result set.
+        -
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          in: query
+          name: topN
+          required: false
+          description: Restrict the result set to the top N elements by value (pie/bar charts).
+        -
+          schema:
+            type: string
+          in: query
+          name: cursor
+          required: false
+          description: Opaque pagination cursor for table responses.
+        -
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          in: query
+          name: limit
+          required: false
+          description: Number of rows to return for table responses.
+        -
+          schema:
+            type: string
+            format: uuid
+          in: query
+          name: categoryId
+          required: false
+          description: Filter results to a specific category.
+        -
+          schema:
+            type: string
+            format: uuid
+          in: query
+          name: productId
+          required: false
+          description: Filter results to a specific product.
+        -
+          schema:
+            type: string
+            format: uuid
+          in: query
+          name: customerId
+          required: false
+          description: Filter results to a specific customer.
+        -
+          schema:
+            type: string
+          in: query
+          name: region
+          required: false
+          description: Filter results to a specific customer region.
+        -
+          schema:
+            type: string
+            enum:
+              - line
+              - bar
+              - pie
+              - table
+              - kpi
+          in: path
+          name: chartType
+          required: true
+          description: Type of chart to generate
+      security: []
+      responses:
+        200:
+          description: Chart payload for the requested type.
+          content:
+            application/json:
+              schema:
+                description: Chart payload for the requested type.
+                oneOf:
+                  -
+                    $ref: "#/components/schemas/def-1"
+                  -
+                    $ref: "#/components/schemas/def-3"
+                  -
+                    $ref: "#/components/schemas/def-2"
+                  -
+                    $ref: "#/components/schemas/def-4"
+                  -
+                    $ref: "#/components/schemas/def-5"
+              examples:
+                example1:
+                  value:
+                    summary: Line chart example
+                    value:
+                      series:
+                        -
+                          name: Revenue
+                          points:
+                            -
+                              x: "2024-01-01"
+                              y: 8250.42
+                            -
+                              x: "2024-01-02"
+                              y: 6120.1
+                        -
+                          name: Expense
+                          points:
+                            -
+                              x: "2024-01-01"
+                              y: 4500
+                            -
+                              x: "2024-01-02"
+                              y: 9820.75
+                example2:
+                  value:
+                    summary: Pie chart example
+                    value:
+                      series:
+                        -
+                          label: Category A
+                          value: 41954.26
+                          percentage: 55.3
+                        -
+                          label: Category B
+                          value: 3390.12
+                          percentage: 4.47
+                        -
+                          label: Others
+                          value: 3050
+                          percentage: 4.03
+        304:
+          description: "Not Modified - client has fresh data"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                description: Validation error
+                $ref: "#/components/schemas/def-0"
+        500:
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                description: Unexpected server error
+                $ref: "#/components/schemas/def-0"
+  "/charts/{chartType}/metadata":
+    get:
+      operationId: getChartMetadata
+      summary: Get chart metadata
+      tags:
+        - Charts
+      description: "Retrieve useful metadata about a chart strategy, including supported metrics and grouping dimensions."
+      parameters:
+        -
+          schema:
+            type: string
+          in: path
+          name: chartType
+          required: true
+          description: Type of chart
+      security: []
+      responses:
+        200:
+          description: Chart type metadata
+          content:
+            application/json:
+              schema:
+                description: Chart type metadata
+                type: object
+                properties:
+                  name:
+                    type: string
+                  supportedMetrics:
+                    type: array
+                    items:
+                      type: string
+                  supportedGroupBy:
+                    type: array
+                    items:
+                      type: string
+                  supportsPagination:
+                    type: boolean
+        404:
+          description: Chart type not found
+          content:
+            application/json:
+              schema:
+                description: Chart type not found
+                $ref: "#/components/schemas/def-0"
+  /charts/types:
+    get:
+      operationId: listChartTypes
+      summary: List available charts
+      tags:
+        - Charts
+      description: List every chart type supported by the API alongside helper metadata for building UI selectors.
+      security: []
+      responses:
+        200:
+          description: Available chart types
+          content:
+            application/json:
+              schema:
+                description: Available chart types
+                type: object
+                properties:
+                  types:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        value:
+                          type: string
+                        label:
+                          type: string
+                        metadata:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            supportedMetrics:
+                              type: array
+                              items:
+                                type: string
+                            supportedGroupBy:
+                              type: array
+                              items:
+                                type: string
+                            supportsPagination:
+                              type: boolean
+        500:
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                description: Unexpected server error
+                $ref: "#/components/schemas/def-0"
+  "/options/{entity}":
+    get:
+      operationId: listOptions
+      summary: Get options
+      tags:
+        - Options
+      description: "Retrieve options for dropdowns with cursor-based pagination"
+      parameters:
+        -
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          in: query
+          name: q
+          required: false
+          description: Search term (fuzzy match)
+        -
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          in: query
+          name: limit
+          required: false
+          description: Maximum number of items to return
+        -
+          schema:
+            type: string
+          in: query
+          name: cursor
+          required: false
+          description: Opaque cursor for fetching the next page
+        -
+          schema:
+            type: boolean
+          in: query
+          name: includeInactive
+          required: false
+          description: Include inactive records in results
+        -
+          schema:
+            type: string
+            format: uuid
+          in: query
+          name: categoryId
+          required: false
+          description: Filter products by category
+        -
+          schema:
+            type: string
+          in: query
+          name: region
+          required: false
+          description: Filter customers by region
+        -
+          schema:
+            type: string
+            enum:
+              - categories
+              - products
+              - customers
+              - regions
+          in: path
+          name: entity
+          required: true
+          description: Entity to fetch options for
+      security: []
+      responses:
+        200:
+          description: Options response
+          content:
+            application/json:
+              schema:
+                description: Options response
+                $ref: "#/components/schemas/def-7"
+              example:
+                summary: Paginated option list
+                value:
+                  items:
+                    -
+                      id: "e8f1f2d1-6f9d-4e64-9ac9-7cb6f9d0d942"
+                      label: Suzano Transporte Florestal
+                      value: "e8f1f2d1-6f9d-4e64-9ac9-7cb6f9d0d942"
+                    -
+                      id: "c2a3f5e0-7d88-4f78-8c19-43ab47f1f9b7"
+                      label: Transporte de Agregados Itabira MG
+                      value: "c2a3f5e0-7d88-4f78-8c19-43ab47f1f9b7"
+                  nextCursor: eyJpZCI6ImMyYTNmNWUwLTdkODgtNGY3OC04YzE5LTQzYWI0N2YxZjliNyJ9
+                  hasMore: true
+                  total: 42
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                description: Validation error
+                $ref: "#/components/schemas/def-0"
+        500:
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                description: Unexpected server error
+                $ref: "#/components/schemas/def-0"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      summary: Dashboard KPI summary
+      tags:
+        - Dashboard
+      description: Get aggregated KPI summary for the dashboard
+      parameters:
+        -
+          schema:
+            type: string
+            format: date
+          in: query
+          name: start
+          required: true
+          description: Start of the period (ISO 8601)
+        -
+          schema:
+            type: string
+            format: date
+          in: query
+          name: end
+          required: true
+          description: End of the period (ISO 8601)
+        -
+          schema:
+            type: string
+            format: uuid
+          in: query
+          name: categoryId
+          required: false
+          description: Filter by category ID
+        -
+          schema:
+            type: string
+            format: uuid
+          in: query
+          name: productId
+          required: false
+          description: Filter by product ID
+        -
+          schema:
+            type: string
+            format: uuid
+          in: query
+          name: customerId
+          required: false
+          description: Filter by customer ID
+        -
+          schema:
+            type: string
+          in: query
+          name: region
+          required: false
+          description: Filter by customer region
+      security: []
+      responses:
+        200:
+          description: Dashboard summary response
+          content:
+            application/json:
+              schema:
+                description: Dashboard summary response
+                $ref: "#/components/schemas/def-8"
+              example:
+                summary: Summary for April 2024
+                value:
+                  totalRevenue: 41954.26
+                  totalExpense: 67740.79
+                  liquidProfit: -25786.53
+                  overdueAccounts:
+                    receivable: 7500
+                    payable: 34853
+                    total: 42353
+                  upcomingAccounts:
+                    receivable: 0
+                    payable: 0
+                    total: 0
+                  metadata:
+                    period:
+                      start: "2024-04-01"
+                      end: "2024-04-30"
+                    generatedAt: "2024-05-01T12:00:00.000Z"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                description: Validation error
+                $ref: "#/components/schemas/def-0"
+        500:
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                description: Unexpected server error
+                $ref: "#/components/schemas/def-0"
+servers:
+  -
+    url: "http://0.0.0.0:3000/api/v1"
+    description: Local development
+tags:
+  -
+    name: Health
+    description: Service health and readiness
+  -
+    name: Charts
+    description: Dynamic chart data endpoints
+  -
+    name: Options
+    description: Option lists for selectors
+  -
+    name: Dashboard
+    description: Dashboard KPI summaries
