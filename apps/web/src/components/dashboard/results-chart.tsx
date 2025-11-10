@@ -1,24 +1,131 @@
-import { TrendingUp } from 'lucide-react';
+/**
+ * Results Chart Component - Real data implementation
+ */
 
+import { useState } from 'react';
+import { TrendingUp, BarChart3, LineChart, PieChart } from 'lucide-react';
+
+import { LineChart as LineChartComponent } from '@/components/charts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useChartData } from '@/hooks/use-chart-data';
 import { cn } from '@/lib/utils';
 
-const MONTH_LABELS: readonly string[] = [
-  'JAN',
-  'FEV',
-  'MAR',
-  'ABR',
-  'MAI',
-  'JUN',
-  'JUL',
-  'AGO',
-  'SET',
-  'OUT',
-  'NOV',
-  'DEZ',
-];
+/**
+ * Chart type options
+ */
+const CHART_TYPES = [
+  { key: 'line', label: 'Linha', icon: LineChart },
+  { key: 'bar', label: 'Barras', icon: BarChart3 },
+  { key: 'pie', label: 'Pizza', icon: PieChart },
+] as const;
 
+/**
+ * Default date range (last 30 days)
+ */
+const getDefaultDateRange = () => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 30);
+  
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+};
+
+/**
+ * Loading skeleton for chart
+ */
+function ChartSkeleton() {
+  return (
+    <div className="flex h-80 flex-col justify-between">
+      <div className="relative flex-1 animate-pulse overflow-hidden rounded-3xl border border-dashed border-brand-200 bg-gradient-to-br from-white via-brand-50/30 to-white">
+        <div className="absolute inset-0">
+          <div className="grid h-full grid-cols-12">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <div className="border-l border-dashed border-slate-200/40" key={`v-${index}`} />
+            ))}
+          </div>
+          <div className="absolute inset-0 grid grid-rows-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div className="border-t border-dashed border-slate-200/40" key={`h-${index}`} />
+            ))}
+          </div>
+        </div>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white/90 px-4 py-2 shadow">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+            Carregando dados...
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Error state for chart
+ */
+function ChartError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return (
+    <div className="flex h-80 flex-col justify-between">
+      <div className="relative flex-1 overflow-hidden rounded-3xl border border-dashed border-rose-200 bg-gradient-to-br from-rose-50/30 to-white">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+          <div className="mb-3 rounded-2xl bg-white/90 px-4 py-3 shadow">
+            <p className="text-sm font-medium text-rose-600">
+              Erro ao carregar dados
+            </p>
+            <p className="text-xs text-slate-500">
+              {error.message}
+            </p>
+          </div>
+          <button
+            onClick={onRetry}
+            className="rounded-full bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow transition hover:bg-brand-600"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Results Chart Component
+ */
 export function ResultsChart() {
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'pie'>('line');
+  const [dateRange] = useState(getDefaultDateRange);
+
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    dataUpdatedAt,
+  } = useChartData(chartType, {
+    ...dateRange,
+    metric: 'revenue',
+    groupBy: 'day',
+  });
+
+  // Calculate time since last update
+  const getTimeAgo = () => {
+    if (!dataUpdatedAt) return 'Nunca';
+    
+    const now = Date.now();
+    const diff = Math.floor((now - dataUpdatedAt) / 1000 / 60);
+    
+    if (diff < 1) return 'Agora';
+    if (diff === 1) return '1 minuto atrás';
+    if (diff < 60) return `${diff} minutos atrás`;
+    
+    const hours = Math.floor(diff / 60);
+    if (hours === 1) return '1 hora atrás';
+    return `${hours} horas atrás`;
+  };
+
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -28,98 +135,72 @@ export function ResultsChart() {
             Comparativo entre receitas e despesas ao longo do intervalo selecionado.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-brand-50 px-3 py-2 text-xs font-medium text-brand-600">
-          <TrendingUp className="h-4 w-4" />
-          Atualizado há 5 minutos
+        
+        <div className="flex items-center gap-3">
+          {/* Chart type selector */}
+          <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+            {CHART_TYPES.map((type) => (
+              <button
+                key={type.key}
+                onClick={() => setChartType(type.key)}
+                className={cn(
+                  'flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition',
+                  chartType === type.key
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100'
+                )}
+                title={type.label}
+              >
+                <type.icon className="h-3 w-3" />
+                <span className="hidden sm:inline">{type.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Last updated indicator */}
+          <div className="flex items-center gap-2 rounded-full bg-brand-50 px-3 py-2 text-xs font-medium text-brand-600">
+            <TrendingUp className="h-4 w-4" />
+            <span className="hidden sm:inline">Atualizado {getTimeAgo()}</span>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="flex h-80 flex-col justify-between">
-        <div className="relative flex-1 overflow-hidden rounded-3xl border border-dashed border-brand-200 bg-gradient-to-br from-white via-brand-50/30 to-white">
-          <GridBackground />
-          <svg
-            aria-label="Gráfico de linhas placeholder"
-            className="absolute inset-0 h-full w-full"
-            role="img"
-          >
-            <polyline
-              fill="none"
-              points="20,190 80,140 140,175 200,100 260,210 320,160 380,220 440,120 500,210 560,150 620,190"
-              stroke="#8155DC"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={3}
-            />
-            <polyline
-              fill="none"
-              points="20,180 80,220 140,140 200,210 260,160 320,200 380,140 440,210 500,160 560,190 620,150"
-              stroke="#2AB3D6"
-              strokeDasharray="6 10"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-            />
-            <defs>
-              <linearGradient id="chartGradient" x1="0%" x2="100%" y1="0%" y2="100%">
-                <stop offset="0%" stopColor="#DDD6FE" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="#C4B5FD" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <polygon
-              fill="url(#chartGradient)"
-              points="20,190 80,140 140,175 200,100 260,210 320,160 380,220 440,120 500,210 560,150 620,190 620,260 20,260"
-            />
-          </svg>
-          <Legend />
-        </div>
-        <div className="mt-4 flex items-center justify-between">
-          {MONTH_LABELS.map((month) => (
-            <span
-              key={month}
-              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
-            >
-              {month}
-            </span>
-          ))}
-        </div>
+      
+      <CardContent>
+        {isLoading && <ChartSkeleton />}
+        
+        {error && !isLoading && (
+          <ChartError 
+            error={error as Error} 
+            onRetry={() => refetch()} 
+          />
+        )}
+        
+        {data && !isLoading && !error && chartType === 'line' && (
+          <LineChartComponent 
+            data={data as any} 
+            height={320}
+            colors={{
+              revenue: '#8B5CF6',
+              expense: '#06B6D4',
+              profit: '#10B981',
+            }}
+          />
+        )}
+
+        {/* TODO: Add other chart types when selected */}
+        {data && !isLoading && !error && chartType !== 'line' && (
+          <div className="flex h-80 items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm font-medium text-slate-600">
+                Gráfico de {CHART_TYPES.find(t => t.key === chartType)?.label}
+              </p>
+              <p className="text-xs text-slate-500">
+                Em desenvolvimento
+              </p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
-  );
-}
-
-function GridBackground() {
-  return (
-    <div className="absolute inset-0">
-      <div className="grid h-full grid-cols-12">
-        {Array.from({ length: 12 }).map((_, index) => (
-          <div key={`v-${index}`} className="border-l border-dashed border-slate-200/80" />
-        ))}
-      </div>
-      <div className="absolute inset-0 grid grid-rows-6">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div key={`h-${index}`} className="border-t border-dashed border-slate-200/80" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Legend() {
-  const items = [
-    { color: 'bg-brand-500', label: 'Receita' },
-    { color: 'bg-cyan-400', label: 'Despesa' },
-  ];
-
-  return (
-    <div className="absolute left-6 top-6 flex items-center gap-4 rounded-full bg-white/90 px-4 py-2 shadow">
-      {items.map((item) => (
-        <div
-          key={item.label}
-          className="flex items-center gap-2 text-xs font-semibold text-slate-600"
-        >
-          <span className={cn('h-2.5 w-2.5 rounded-full', item.color)} />
-          {item.label}
-        </div>
-      ))}
-    </div>
   );
 }

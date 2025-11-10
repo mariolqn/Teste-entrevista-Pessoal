@@ -2,8 +2,7 @@
  * Shared utility functions
  */
 
-import { format, parseISO, isValid } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { parseISO, isValid } from 'date-fns';
 
 /**
  * Safely parse a date string

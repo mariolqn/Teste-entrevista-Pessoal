@@ -74,14 +74,14 @@ export function validateCNPJ(cnpj: string): boolean {
   
   let sum = 0;
   for (let i = 0; i < 12; i++) {
-    sum += parseInt(cleaned.charAt(i)) * weights1[i];
-  }
-  let checkDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (checkDigit !== parseInt(cleaned.charAt(12))) return false;
-  
-  sum = 0;
-  for (let i = 0; i < 13; i++) {
-    sum += parseInt(cleaned.charAt(i)) * weights2[i];
+  sum += parseInt(cleaned.charAt(i)) * (weights1[i] || 0);
+}
+let checkDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+if (checkDigit !== parseInt(cleaned.charAt(12))) return false;
+
+sum = 0;
+for (let i = 0; i < 13; i++) {
+  sum += parseInt(cleaned.charAt(i)) * (weights2[i] || 0);
   }
   checkDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   

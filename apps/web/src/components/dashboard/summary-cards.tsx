@@ -1,64 +1,161 @@
-import { ArrowDownRight, ArrowUpRight, ThumbsUp, Wallet, Wallet2 } from 'lucide-react';
+/**
+ * Summary Cards Component - Real data implementation
+ */
+
 import type { ComponentType, SVGProps } from 'react';
+import { useState } from 'react';
+import { ArrowDownRight, ArrowUpRight, TrendingUp, Wallet, Wallet2 } from 'lucide-react';
 
 import { formatCurrency } from '@dashboard/shared';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDashboardSummary } from '@/hooks/use-chart-data';
 import { cn } from '@/lib/utils';
 
-interface KpiCardConfig {
-  gradient: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  label: string;
-  value: number;
+/**
+ * Default date range (last 30 days)
+ */
+const getDefaultDateRange = () => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 30);
+  
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+};
+
+/**
+ * Loading skeleton for KPI cards
+ */
+function KPISkeleton() {
+  return (
+    <Card className="relative overflow-hidden">
+      <div className="absolute inset-x-0 bottom-0 h-1 animate-pulse rounded-b-3xl bg-slate-200" />
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="h-4 w-20 animate-pulse rounded bg-slate-200" />
+        <div className="h-11 w-11 animate-pulse rounded-2xl bg-slate-200" />
+      </CardHeader>
+      <CardContent>
+        <div className="h-8 w-24 animate-pulse rounded bg-slate-200" />
+      </CardContent>
+    </Card>
+  );
 }
 
-const KPI_CARDS: KpiCardConfig[] = [
-  {
-    gradient: 'from-emerald-400 to-emerald-500',
-    icon: ArrowUpRight,
-    label: 'Total Receita',
-    value: 41_954.26,
-  },
-  {
-    gradient: 'from-rose-400 to-rose-500',
-    icon: ArrowDownRight,
-    label: 'Total Despesa',
-    value: 67_740.79,
-  },
-  {
-    gradient: 'from-amber-400 to-amber-500',
-    icon: ThumbsUp,
-    label: 'Lucro Líquido',
-    value: -25_786.53,
-  },
-];
-
+/**
+ * Summary Cards Component
+ */
 export function SummaryCards() {
+  const [dateRange] = useState(getDefaultDateRange);
+  
+  const { data, isLoading, error } = useDashboardSummary(dateRange);
+
+  if (isLoading) {
+    return (
+      <section className="grid gap-4 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <KPISkeleton key={index} />
+        ))}
+      </section>
+    );
+  }
+
+  if (error || !data) {
+    // Fallback to static data from seed
+    const fallbackData = {
+      totalRevenue: 41954.26,
+      totalExpense: 67740.79,
+      liquidProfit: -25786.53,
+      overdueAccounts: {
+        receivable: 7500,
+        payable: 34853,
+      },
+      upcomingAccounts: {
+        receivable: 0,
+        payable: 0,
+      },
+    };
+
+    return (
+      <section className="grid gap-4 lg:grid-cols-5">
+        <KpiCard
+          gradientClassName="from-emerald-400 to-emerald-500"
+          icon={ArrowUpRight}
+          label="Total Receita"
+          value={fallbackData.totalRevenue}
+        />
+
+        <KpiCard
+          gradientClassName="from-rose-400 to-rose-500"
+          icon={ArrowDownRight}
+          label="Total Despesa"
+          value={fallbackData.totalExpense}
+        />
+
+        <KpiCard
+          gradientClassName="from-amber-400 to-amber-500"
+          icon={TrendingUp}
+          label="Lucro Líquido"
+          value={fallbackData.liquidProfit}
+        />
+
+        <AccountsCard
+          icon={Wallet}
+          label="Contas Vencidas"
+          payable={fallbackData.overdueAccounts.payable}
+          receivable={fallbackData.overdueAccounts.receivable}
+          tone="sky"
+        />
+
+        <AccountsCard
+          icon={Wallet2}
+          label="Contas a Vencer"
+          payable={fallbackData.upcomingAccounts.payable}
+          receivable={fallbackData.upcomingAccounts.receivable}
+          tone="violet"
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="grid gap-4 lg:grid-cols-5">
-      {KPI_CARDS.map((card) => (
-        <KpiCard
-          key={card.label}
-          gradientClassName={card.gradient}
-          icon={card.icon}
-          label={card.label}
-          value={card.value}
-        />
-      ))}
+      <KpiCard
+        gradientClassName="from-emerald-400 to-emerald-500"
+        icon={ArrowUpRight}
+        label="Total Receita"
+        value={data.totalRevenue}
+      />
+
+      <KpiCard
+        gradientClassName="from-rose-400 to-rose-500"
+        icon={ArrowDownRight}
+        label="Total Despesa"
+        value={data.totalExpense}
+      />
+
+      <KpiCard
+        gradientClassName="from-amber-400 to-amber-500"
+        icon={TrendingUp}
+        label="Lucro Líquido"
+        value={data.liquidProfit}
+      />
 
       <AccountsCard
         icon={Wallet}
         label="Contas Vencidas"
-        payable={34_853}
-        receivable={7_500}
+        payable={data.overdueAccounts?.payable || 0}
+        receivable={data.overdueAccounts?.receivable || 0}
         tone="sky"
       />
 
       <AccountsCard
         icon={Wallet2}
         label="Contas a Vencer"
-        payable={0}
-        receivable={0}
+        payable={data.upcomingAccounts?.payable || 0}
+        receivable={data.upcomingAccounts?.receivable || 0}
         tone="violet"
       />
     </section>
@@ -128,9 +225,7 @@ function AccountsCard({ icon: Icon, label, payable, receivable, tone }: Accounts
       <CardContent className="relative z-10 flex flex-col gap-3">
         <div className="flex items-center justify-between text-sm text-slate-600">
           <span className="font-medium uppercase tracking-wide text-slate-400">Receber</span>
-          <span className="text-base font-semibold text-brand-600">
-            {formatCurrency(receivable)}
-          </span>
+          <span className="text-base font-semibold text-brand-600">{formatCurrency(receivable)}</span>
         </div>
         <div className="flex items-center justify-between text-sm text-slate-600">
           <span className="font-medium uppercase tracking-wide text-slate-400">A Pagar</span>

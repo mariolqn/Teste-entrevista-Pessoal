@@ -22,9 +22,9 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * API Response types
+ * Common API Response types
  */
-export interface ApiResponse<T = unknown> {
+export interface CommonApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: ApiError;
