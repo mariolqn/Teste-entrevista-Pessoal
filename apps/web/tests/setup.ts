@@ -3,6 +3,8 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+const noopRecords = () => [] as IntersectionObserverEntry[];
+
 afterEach(() => {
   cleanup();
 });
@@ -13,7 +15,7 @@ class IntersectionObserverMock implements IntersectionObserver {
 
   readonly rootMargin = '';
 
-  readonly thresholds: ReadonlyArray<number> = [];
+  readonly thresholds: readonly number[] = [];
 
   observe = vi.fn();
 
@@ -21,12 +23,11 @@ class IntersectionObserverMock implements IntersectionObserver {
 
   disconnect = vi.fn();
 
-  takeRecords = vi.fn(() => []);
+  takeRecords = vi.fn(noopRecords);
 }
 
 Object.defineProperty(globalThis, 'IntersectionObserver', {
-  writable: true,
   configurable: true,
   value: IntersectionObserverMock,
+  writable: true,
 });
-

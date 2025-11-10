@@ -1,17 +1,16 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  VITE_API_URL: z
-    .string()
-    .url()
-    .default('http://localhost:3000'),
+  VITE_API_URL: z.string().url().default('http://localhost:3000'),
   VITE_APP_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 
-const parsed = envSchema.safeParse({
+const rawEnv: z.input<typeof envSchema> = {
   VITE_API_URL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
   VITE_APP_ENV: import.meta.env.VITE_APP_ENV ?? import.meta.env.MODE ?? 'development',
-});
+};
+
+const parsed = envSchema.safeParse(rawEnv);
 
 if (!parsed.success) {
   // eslint-disable-next-line no-console -- surface configuration issues early
@@ -19,13 +18,12 @@ if (!parsed.success) {
   throw new Error('Invalid frontend environment variables');
 }
 
-const { VITE_API_URL, VITE_APP_ENV } = parsed.data;
+const envData = parsed.data;
 
 export const env = {
-  apiUrl: VITE_API_URL,
-  appEnv: VITE_APP_ENV,
-  isDev: VITE_APP_ENV === 'development',
-  isTest: VITE_APP_ENV === 'test',
-  isProd: VITE_APP_ENV === 'production',
+  apiUrl: envData.VITE_API_URL,
+  appEnv: envData.VITE_APP_ENV,
+  isDev: envData.VITE_APP_ENV === 'development',
+  isTest: envData.VITE_APP_ENV === 'test',
+  isProd: envData.VITE_APP_ENV === 'production',
 } as const;
-

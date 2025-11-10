@@ -24,4 +24,3 @@ const createQueryClient = () =>
 export const queryClient = createQueryClient();
 
 export const getQueryClient = () => queryClient;
-

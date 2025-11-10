@@ -1,14 +1,17 @@
+import { AccountsPanel } from '@/components/dashboard/accounts-panel';
+import { FiltersToolbar } from '@/components/dashboard/filters-toolbar';
+import { ResultsChart } from '@/components/dashboard/results-chart';
+import { SummaryCards } from '@/components/dashboard/summary-cards';
+
 export function DashboardPage() {
   return (
-    <section className="w-full max-w-7xl px-6 py-12">
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-10 shadow-card">
-        <h2 className="text-2xl font-semibold text-slate-900">Dashboard Financeiro</h2>
-        <p className="mt-3 max-w-2xl text-sm text-slate-600">
-          Todos os gráficos, filtros e dados dinâmicos serão implementados nas próximas etapas. Esta
-          página serve como base para o layout e roteamento do projeto.
-        </p>
-      </div>
-    </section>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
+      <FiltersToolbar />
+      <SummaryCards />
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1fr)]">
+        <ResultsChart />
+        <AccountsPanel />
+      </section>
+    </div>
   );
 }
-

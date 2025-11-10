@@ -1,12 +1,9 @@
-import type { Config } from 'tailwindcss';
 import defaultTheme from 'tailwindcss/defaultTheme';
 
+import type { Config } from 'tailwindcss';
+
 const config: Config = {
-  content: [
-    './index.html',
-    './src/**/*.{ts,tsx}',
-    '../../packages/shared/src/**/*.{ts,tsx}',
-  ],
+  content: ['./index.html', './src/**/*.{ts,tsx}', '../../packages/shared/src/**/*.{ts,tsx}'],
   darkMode: ['class'],
   theme: {
     extend: {
@@ -56,4 +53,3 @@ const config: Config = {
 };
 
 export default config;
-

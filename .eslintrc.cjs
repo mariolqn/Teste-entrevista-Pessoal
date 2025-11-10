@@ -50,6 +50,9 @@ module.exports = {
         alwaysTryTypes: true,
         project: ['./tsconfig.json', './apps/*/tsconfig.json', './packages/*/tsconfig.json'],
       },
+      node: {
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      },
     },
   },
   rules: {
@@ -192,6 +195,9 @@ module.exports = {
     },
     {
       files: ['*.config.js', '*.config.ts'],
+      parserOptions: {
+        project: null,
+      },
       rules: {
         'unicorn/prefer-module': 'off',
         'import/no-default-export': 'off',
@@ -199,10 +205,19 @@ module.exports = {
     },
     {
       files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
+      parserOptions: {
+        project: null,
+      },
       rules: {
         '@typescript-eslint/no-explicit-any': 'off',
         'sonarjs/no-duplicate-string': 'off',
         'security/detect-object-injection': 'off',
+      },
+    },
+    {
+      files: ['tests/**/*.ts'],
+      parserOptions: {
+        project: null,
       },
     },
   ],
