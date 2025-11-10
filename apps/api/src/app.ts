@@ -86,7 +86,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Rate limiting - disabled in test mode
   if (config.featureRateLimitEnabled && config.env !== 'test') {
     const { getRedisInstance } = await import('./lib/redis');
-    const redisInstance = config.featureCacheEnabled ? getRedisInstance() : undefined;
+    const redisInstance = config.featureCacheEnabled ? getRedisInstance() ?? undefined : undefined;
     
     await app.register(rateLimit, {
       max: config.rateLimitMax,
@@ -94,8 +94,10 @@ export async function buildApp(): Promise<FastifyInstance> {
       cache: 10_000,
       allowList: ['127.0.0.1', '::1'], // Whitelist localhost
       redis: redisInstance,
+      skipOnError: true,
       keyGenerator: (request) => {
-        return `${request.ip}:${request.routerPath}`;
+        const route = request.routeOptions?.url ?? request.routerPath ?? request.url;
+        return `${request.ip}:${route}`;
       },
       errorResponseBuilder: (request, context) => {
         return {
