@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Calendar, ChevronLeft, FileDown, Search } from 'lucide-react';
 
+import { InfiniteScrollSelect } from '@/components/ui/infinite-scroll-select';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import type { SelectOption } from '@/services/options.service';
 
 export function FiltersToolbar() {
+  const [costCenter, setCostCenter] = useState<SelectOption | null>(null);
+
   return (
     <Card className="flex flex-wrap items-center gap-4 bg-gradient-to-r from-brand-50/70 to-white px-6 py-5 shadow-soft">
       <button
@@ -15,15 +20,13 @@ export function FiltersToolbar() {
         <ChevronLeft className="h-5 w-5" />
       </button>
 
-      <FilterField label="Centro de custo">
-        <button
-          className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-500 shadow-sm transition hover:border-brand-200 hover:text-brand-700"
-          type="button"
-        >
-          <span>Selecione...</span>
-          <ChevronLeft className="h-4 w-4 rotate-180 text-slate-400" />
-        </button>
-      </FilterField>
+      <InfiniteScrollSelect
+        entity="categories"
+        label="Centro de custo"
+        placeholder="Selecione..."
+        value={costCenter}
+        onChange={setCostCenter}
+      />
 
       <FilterField label="Data Inicial">
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
@@ -40,12 +43,7 @@ export function FiltersToolbar() {
       </FilterField>
 
       <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 shadow-sm transition hover:border-brand-200 hover:text-brand-700">
-        <input
-          checked
-          readOnly
-          className="h-4 w-4 rounded border-brand-500 text-brand-500"
-          type="checkbox"
-        />
+        <input checked className="h-4 w-4 rounded border-brand-500 text-brand-500" readOnly type="checkbox" />
         Emitidos
       </label>
 

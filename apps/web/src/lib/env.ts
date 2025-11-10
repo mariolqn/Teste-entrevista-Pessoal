@@ -6,8 +6,8 @@ const envSchema = z.object({
 });
 
 const rawEnv: z.input<typeof envSchema> = {
-  VITE_API_URL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
-  VITE_APP_ENV: import.meta.env.VITE_APP_ENV ?? import.meta.env.MODE ?? 'development',
+  VITE_API_URL: import.meta.env['VITE_API_URL'] ?? 'http://localhost:3000',
+  VITE_APP_ENV: import.meta.env['VITE_APP_ENV'] ?? import.meta.env['MODE'] ?? 'development',
 };
 
 const parsed = envSchema.safeParse(rawEnv);
