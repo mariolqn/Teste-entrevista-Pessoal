@@ -1,33 +1,26 @@
 /**
- * Accounts Panel Component - Real data implementation
+ * Accounts Panel Component - Connected to global state
  */
 
-import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
+
+import type { TableResponse } from '@dashboard/types';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/charts';
 import { useTableData } from '@/hooks/use-chart-data';
-
-/**
- * Default date range (last 30 days)
- */
-const getDefaultDateRange = () => {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 30);
-  
-  return {
-    start: start.toISOString(),
-    end: end.toISOString(),
-  };
-};
+import { useChartAPIParams } from '@/stores/dashboard-store';
 
 /**
  * Fallback static data (matching the seed values)
  */
-const FALLBACK_DATA = {
-  columns: ['Nome', 'Despesa', 'Receita', 'Resultado'],
+const FALLBACK_DATA: TableResponse = {
+  columns: [
+    { key: 'Nome', label: 'Nome', type: 'string' },
+    { key: 'Despesa', label: 'Despesa', type: 'currency' },
+    { key: 'Receita', label: 'Receita', type: 'currency' },
+    { key: 'Resultado', label: 'Resultado', type: 'currency' },
+  ],
   rows: [
     {
       Nome: 'Suzano Transporte Florestal',
@@ -42,14 +35,13 @@ const FALLBACK_DATA = {
       Resultado: -14191.32,
     },
   ],
-  cursor: undefined,
 };
 
 /**
  * Accounts Panel Component
  */
 export function AccountsPanel() {
-  const [dateRange] = useState(getDefaultDateRange);
+  const apiParams = useChartAPIParams();
   
   const {
     data,
@@ -59,18 +51,24 @@ export function AccountsPanel() {
     hasNextPage,
     isFetchingNextPage,
   } = useTableData({
-    ...dateRange,
+    ...apiParams,
     metric: 'revenue',
     limit: 10,
   });
 
   // Transform infinite query data to table format
-  const tableData = data
-    ? {
-        columns: (data.pages[0] as any)?.columns || FALLBACK_DATA.columns,
-        rows: data.pages.flatMap(page => (page as any)?.rows || []),
-        cursor: (data.pages[data.pages.length - 1] as any)?.cursor,
-      }
+  const tableData: TableResponse = data
+    ? (() => {
+        const result: TableResponse = {
+          columns: data.pages[0]?.columns || FALLBACK_DATA.columns,
+          rows: data.pages.flatMap(page => page.rows || []),
+        };
+        const lastPageCursor = data.pages[data.pages.length - 1]?.cursor;
+        if (lastPageCursor) {
+          result.cursor = lastPageCursor;
+        }
+        return result;
+      })()
     : FALLBACK_DATA;
 
   const handleLoadMore = () => {
@@ -79,13 +77,15 @@ export function AccountsPanel() {
     }
   };
 
+  const showErrorWarning = error && !isLoading;
+
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Contas por centro de custo</CardTitle>
           <p className="mt-1 text-sm text-slate-500">
-            Visão detalhada dos principais centros de custo e seus resultados financeiros.
+            Visão detalhada dos principais centros de custo no período selecionado.
           </p>
         </div>
         <button
@@ -98,18 +98,16 @@ export function AccountsPanel() {
       </CardHeader>
       
       <CardContent>
-        {error && !isLoading ? (
-          <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-rose-200 bg-rose-50/30">
-            <div className="text-center">
-              <p className="text-sm font-medium text-rose-600">
-                Erro ao carregar dados
-              </p>
-              <p className="text-xs text-slate-500">
-                Exibindo dados de exemplo
+        {showErrorWarning && (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50/50 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <p className="text-sm text-amber-700">
+                <strong>Atenção:</strong> Erro ao carregar dados da API. Exibindo dados de exemplo.
               </p>
             </div>
           </div>
-        ) : null}
+        )}
 
         <DataTable
           data={tableData}

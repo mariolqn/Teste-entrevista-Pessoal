@@ -19,6 +19,7 @@ interface InfiniteScrollSelectProps<T = string> {
   value?: SelectOption<T> | null;
   disabled?: boolean;
   limit?: number;
+  className?: string;
 }
 
 export function InfiniteScrollSelect<T = string>({
@@ -30,6 +31,7 @@ export function InfiniteScrollSelect<T = string>({
   value,
   disabled = false,
   limit = 20,
+  className,
 }: InfiniteScrollSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,7 +95,7 @@ export function InfiniteScrollSelect<T = string>({
   const selectedLabel = value?.label ?? placeholder;
 
   return (
-    <div className="flex min-w-[220px] flex-col gap-1">
+    <div className={cn('flex min-w-[220px] flex-col gap-1', className)}>
       <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={labelId}>
         {label}
       </label>

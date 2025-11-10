@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* React Day Picker styles */
+.rdp {
+  --rdp-cell-size: 32px;
+  --rdp-accent-color: #8b5cf6;
+  --rdp-background-color: #f8fafc;
+}
+
+.rdp-day_range_middle:not(.rdp-day_range_start):not(.rdp-day_range_end) {
+  background-color: rgb(139 92 246 / 0.1) !important;
+  color: rgb(139 92 246) !important;
+}
+
+.rdp-day_range_start,
+.rdp-day_range_end {
+  background-color: rgb(139 92 246) !important;
+  color: white !important;
+}
+
+.rdp-day_range_start {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.rdp-day_range_end {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
 :root {
   color-scheme: light;
   font-synthesis: none;

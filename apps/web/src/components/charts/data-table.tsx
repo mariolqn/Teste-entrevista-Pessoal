@@ -137,7 +137,8 @@ export function DataTable({
           <thead className="bg-slate-100/70">
             <tr>
               {data.columns.map((column) => {
-                const columnKey = typeof column === 'string' ? column : column.toString();
+                const columnKey = typeof column === 'string' ? column : column.key;
+                const columnLabel = typeof column === 'string' ? column : column.label;
                 return (
                   <th
                     key={columnKey}
@@ -148,7 +149,7 @@ export function DataTable({
                     onClick={() => onSort && handleSort(columnKey)}
                   >
                     <div className="flex items-center gap-1">
-                      {columnKey}
+                      {columnLabel}
                       {getSortIcon(columnKey)}
                     </div>
                   </th>
@@ -163,7 +164,7 @@ export function DataTable({
                 className="transition-colors hover:bg-slate-50"
               >
                 {data.columns.map((column) => {
-                  const columnKey = typeof column === 'string' ? column : column.toString();
+                  const columnKey = typeof column === 'string' ? column : column.key;
                   return (
                     <td
                       key={columnKey}

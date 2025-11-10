@@ -1,13 +1,16 @@
 /**
- * Results Chart Component - Real data implementation
+ * Results Chart Component - Connected to global state
  */
 
 import { useState } from 'react';
 import { TrendingUp, BarChart3, LineChart, PieChart } from 'lucide-react';
 
+import type { LineChartResponse } from '@dashboard/types';
+
 import { LineChart as LineChartComponent } from '@/components/charts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useChartData } from '@/hooks/use-chart-data';
+import { useChartAPIParams } from '@/stores/dashboard-store';
 import { cn } from '@/lib/utils';
 
 /**
@@ -18,20 +21,6 @@ const CHART_TYPES = [
   { key: 'bar', label: 'Barras', icon: BarChart3 },
   { key: 'pie', label: 'Pizza', icon: PieChart },
 ] as const;
-
-/**
- * Default date range (last 30 days)
- */
-const getDefaultDateRange = () => {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 30);
-  
-  return {
-    start: start.toISOString(),
-    end: end.toISOString(),
-  };
-};
 
 /**
  * Loading skeleton for chart
@@ -96,7 +85,7 @@ function ChartError({ error, onRetry }: { error: Error; onRetry: () => void }) {
  */
 export function ResultsChart() {
   const [chartType, setChartType] = useState<'line' | 'bar' | 'pie'>('line');
-  const [dateRange] = useState(getDefaultDateRange);
+  const apiParams = useChartAPIParams();
 
   const {
     data,
@@ -105,7 +94,7 @@ export function ResultsChart() {
     refetch,
     dataUpdatedAt,
   } = useChartData(chartType, {
-    ...dateRange,
+    ...apiParams,
     metric: 'revenue',
     groupBy: 'day',
   });
@@ -132,7 +121,7 @@ export function ResultsChart() {
         <div>
           <CardTitle>Resultados por período</CardTitle>
           <p className="mt-1 text-sm text-slate-500">
-            Comparativo entre receitas e despesas ao longo do intervalo selecionado.
+            Comparativo entre receitas e despesas ao longo do período selecionado.
           </p>
         </div>
         
@@ -175,9 +164,9 @@ export function ResultsChart() {
           />
         )}
         
-        {data && !isLoading && !error && chartType === 'line' && (
+        {data && !isLoading && !error && chartType === 'line' && 'series' in data && Array.isArray(data.series) && data.series.every(s => 'points' in s) && (
           <LineChartComponent 
-            data={data as any} 
+            data={data as LineChartResponse} 
             height={320}
             colors={{
               revenue: '#8B5CF6',
@@ -187,7 +176,7 @@ export function ResultsChart() {
           />
         )}
 
-        {/* TODO: Add other chart types when selected */}
+        {/* Placeholder for other chart types */}
         {data && !isLoading && !error && chartType !== 'line' && (
           <div className="flex h-80 items-center justify-center">
             <div className="text-center">
@@ -196,6 +185,19 @@ export function ResultsChart() {
               </p>
               <p className="text-xs text-slate-500">
                 Em desenvolvimento
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {!data && !isLoading && !error && (
+          <div className="flex h-80 items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm font-medium text-slate-600">
+                Nenhum dado disponível
+              </p>
+              <p className="text-xs text-slate-500">
+                Ajuste o período para ver os resultados
               </p>
             </div>
           </div>
