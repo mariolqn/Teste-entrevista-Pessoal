@@ -7,11 +7,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import { useDebouncedValue } from '@/hooks/use-debounce';
 
-// Mock timers
-vi.useFakeTimers();
-
 describe('useDebouncedValue', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.clearAllTimers();
   });
 

@@ -31,3 +31,18 @@ Object.defineProperty(globalThis, 'IntersectionObserver', {
   value: IntersectionObserverMock,
   writable: true,
 });
+
+// Mock ResizeObserver for components relying on layout measurements
+class ResizeObserverMock implements ResizeObserver {
+  observe = vi.fn();
+
+  unobserve = vi.fn();
+
+  disconnect = vi.fn();
+}
+
+Object.defineProperty(globalThis, 'ResizeObserver', {
+  configurable: true,
+  value: ResizeObserverMock,
+  writable: true,
+});

@@ -47,14 +47,16 @@ vi.mock('recharts', async () => {
     ...actual,
     ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
     PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
-    Pie: ({ data, innerRadius, outerRadius, animationDuration }: any) => (
+    Pie: ({ data, innerRadius, outerRadius, animationDuration, children }: any) => (
       <div 
         data-testid="pie"
         data-inner-radius={innerRadius}
         data-outer-radius={outerRadius}
         data-animation-duration={animationDuration}
         data-data-length={data.length}
-      />
+      >
+        {children}
+      </div>
     ),
     Cell: ({ fill }: any) => <div data-testid="pie-cell" data-fill={fill} />,
     Tooltip: ({ content }: any) => <div data-testid="tooltip" data-custom-content={!!content} />,

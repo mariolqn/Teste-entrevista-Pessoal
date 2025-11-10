@@ -167,7 +167,7 @@ model Transaction {
 
 /// View for daily aggregations (created via migration)
 view DailySummary {
-  date          DateTime @id
+  date          DateTime @unique
   totalRevenue  Decimal  @map("total_revenue")
   totalExpense  Decimal  @map("total_expense")
   totalProfit   Decimal  @map("total_profit")
@@ -178,7 +178,7 @@ view DailySummary {
 
 /// View for category performance
 view CategoryPerformance {
-  categoryId    String  @id @map("category_id")
+  categoryId    String  @map("category_id")
   categoryName  String  @map("category_name")
   period        String
   revenue       Decimal
@@ -186,5 +186,6 @@ view CategoryPerformance {
   profit        Decimal
   transactionCount Int @map("transaction_count")
   
+  @@unique([categoryId, period])
   @@map("v_category_performance")
 }

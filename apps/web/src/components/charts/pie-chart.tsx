@@ -145,5 +145,7 @@ export function PieChart({
  * Donut Chart Component (Pie with inner radius)
  */
 export function DonutChart(props: PieChartProps) {
-  return <PieChart {...props} innerRadius={60} />;
+  const { innerRadius = 60, ...rest } = props;
+
+  return <PieChart {...rest} innerRadius={innerRadius} />;
 }

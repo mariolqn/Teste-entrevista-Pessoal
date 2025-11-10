@@ -68,16 +68,18 @@ describe('ChartsService', () => {
       });
 
       expect(result).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/v1/charts/line?start=2024-01-01&end=2024-01-02&metric=revenue',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        }
-      );
+      const expectedUrl = new URL('http://localhost:3000/v1/charts/line');
+      expectedUrl.searchParams.set('start', '2024-01-01');
+      expectedUrl.searchParams.set('end', '2024-01-02');
+      expectedUrl.searchParams.set('metric', 'revenue');
+
+      expect(mockFetch).toHaveBeenCalledWith(expectedUrl.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
     });
 
     it('should handle Date objects in parameters', async () => {
@@ -100,10 +102,12 @@ describe('ChartsService', () => {
         metric: 'revenue',
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        `http://localhost:3000/v1/charts/bar?start=${startDate.toISOString()}&end=${endDate.toISOString()}&metric=revenue`,
-        expect.any(Object)
-      );
+      const expectedUrl = new URL('http://localhost:3000/v1/charts/bar');
+      expectedUrl.searchParams.set('start', startDate.toISOString());
+      expectedUrl.searchParams.set('end', endDate.toISOString());
+      expectedUrl.searchParams.set('metric', 'revenue');
+
+      expect(mockFetch).toHaveBeenCalledWith(expectedUrl.toString(), expect.any(Object));
     });
 
     it('should include all valid parameters in URL', async () => {
@@ -175,20 +179,11 @@ describe('ChartsService', () => {
           end: '2024-01-02',
           metric: 'revenue',
         })
-      ).rejects.toThrow(ChartAPIError);
-
-      try {
-        await service.getChartData('line', {
-          start: '',
-          end: '2024-01-02',
-          metric: 'revenue',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(ChartAPIError);
-        expect((error as ChartAPIError).status).toBe(400);
-        expect((error as ChartAPIError).message).toBe('Start date is required');
-        expect((error as ChartAPIError).response).toEqual(errorResponse);
-      }
+      ).rejects.toMatchObject({
+        status: 400,
+        message: 'Start date is required',
+        response: errorResponse,
+      });
     });
 
     it('should handle API error responses with plain text', async () => {
@@ -204,19 +199,10 @@ describe('ChartsService', () => {
           end: '2024-01-02',
           metric: 'revenue',
         })
-      ).rejects.toThrow(ChartAPIError);
-
-      try {
-        await service.getChartData('line', {
-          start: '2024-01-01',
-          end: '2024-01-02',
-          metric: 'revenue',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(ChartAPIError);
-        expect((error as ChartAPIError).status).toBe(500);
-        expect((error as ChartAPIError).message).toBe('Internal Server Error');
-      }
+      ).rejects.toMatchObject({
+        status: 500,
+        message: 'Internal Server Error',
+      });
     });
 
     it('should handle network errors', async () => {
@@ -228,19 +214,10 @@ describe('ChartsService', () => {
           end: '2024-01-02',
           metric: 'revenue',
         })
-      ).rejects.toThrow(ChartAPIError);
-
-      try {
-        await service.getChartData('line', {
-          start: '2024-01-01',
-          end: '2024-01-02',
-          metric: 'revenue',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(ChartAPIError);
-        expect((error as ChartAPIError).status).toBe(0);
-        expect((error as ChartAPIError).message).toBe('Network error');
-      }
+      ).rejects.toMatchObject({
+        status: 0,
+        message: 'Network error',
+      });
     });
 
     it('should handle unknown errors', async () => {
@@ -252,19 +229,10 @@ describe('ChartsService', () => {
           end: '2024-01-02',
           metric: 'revenue',
         })
-      ).rejects.toThrow(ChartAPIError);
-
-      try {
-        await service.getChartData('line', {
-          start: '2024-01-01',
-          end: '2024-01-02',
-          metric: 'revenue',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(ChartAPIError);
-        expect((error as ChartAPIError).status).toBe(0);
-        expect((error as ChartAPIError).message).toBe('Unknown error occurred');
-      }
+      ).rejects.toMatchObject({
+        status: 0,
+        message: 'Unknown error occurred',
+      });
     });
   });
 
@@ -318,10 +286,12 @@ describe('ChartsService', () => {
         region: 'US',
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        `http://localhost:3000/v1/dashboard/summary?start=${startDate.toISOString()}&end=${endDate.toISOString()}&region=US`,
-        expect.any(Object)
-      );
+      const expectedUrl = new URL('http://localhost:3000/v1/dashboard/summary');
+      expectedUrl.searchParams.set('start', startDate.toISOString());
+      expectedUrl.searchParams.set('end', endDate.toISOString());
+      expectedUrl.searchParams.set('region', 'US');
+
+      expect(mockFetch).toHaveBeenCalledWith(expectedUrl.toString(), expect.any(Object));
     });
 
     it('should include all filter parameters', async () => {
@@ -341,10 +311,15 @@ describe('ChartsService', () => {
         region: 'US',
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/v1/dashboard/summary?start=2024-01-01&end=2024-01-02&categoryId=1&productId=2&customerId=3&region=US',
-        expect.any(Object)
-      );
+      const expectedUrl = new URL('http://localhost:3000/v1/dashboard/summary');
+      expectedUrl.searchParams.set('start', '2024-01-01');
+      expectedUrl.searchParams.set('end', '2024-01-02');
+      expectedUrl.searchParams.set('categoryId', '1');
+      expectedUrl.searchParams.set('productId', '2');
+      expectedUrl.searchParams.set('customerId', '3');
+      expectedUrl.searchParams.set('region', 'US');
+
+      expect(mockFetch).toHaveBeenCalledWith(expectedUrl.toString(), expect.any(Object));
     });
 
     it('should exclude undefined and null summary parameters', async () => {
@@ -386,19 +361,11 @@ describe('ChartsService', () => {
           start: '2024-01-02',
           end: '2024-01-01', // Invalid range
         })
-      ).rejects.toThrow(ChartAPIError);
-
-      try {
-        await service.getDashboardSummary({
-          start: '2024-01-02',
-          end: '2024-01-01',
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(ChartAPIError);
-        expect((error as ChartAPIError).status).toBe(400);
-        expect((error as ChartAPIError).message).toBe('Invalid date range');
-        expect((error as ChartAPIError).response).toEqual(errorResponse);
-      }
+      ).rejects.toMatchObject({
+        status: 400,
+        message: 'Invalid date range',
+        response: errorResponse,
+      });
     });
   });
 });

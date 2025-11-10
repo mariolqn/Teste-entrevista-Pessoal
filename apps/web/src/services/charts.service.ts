@@ -61,7 +61,7 @@ export class ChartsService {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || `${env.apiUrl}/v1`;
+    this.baseURL = baseURL || `${env.apiUrl}/api/v1`;
   }
 
   /**
@@ -76,7 +76,19 @@ export class ChartsService {
     // Add query parameters
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        const stringValue = value instanceof Date ? value.toISOString() : String(value);
+        let stringValue: string;
+        if (value instanceof Date) {
+          // Format dates as YYYY-MM-DD for API compatibility
+          stringValue = key === 'start' || key === 'end' 
+            ? value.toISOString().split('T')[0]! 
+            : value.toISOString();
+        } else {
+          stringValue = String(value);
+          // If it's a start/end parameter and looks like an ISO timestamp, convert to YYYY-MM-DD
+          if ((key === 'start' || key === 'end') && stringValue.includes('T')) {
+            stringValue = stringValue.split('T')[0]!;
+          }
+        }
         url.searchParams.append(key, stringValue);
       }
     });
@@ -135,7 +147,19 @@ export class ChartsService {
     // Add query parameters
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        const stringValue = value instanceof Date ? value.toISOString() : String(value);
+        let stringValue: string;
+        if (value instanceof Date) {
+          // Format dates as YYYY-MM-DD for API compatibility
+          stringValue = key === 'start' || key === 'end' 
+            ? value.toISOString().split('T')[0]! 
+            : value.toISOString();
+        } else {
+          stringValue = String(value);
+          // If it's a start/end parameter and looks like an ISO timestamp, convert to YYYY-MM-DD
+          if ((key === 'start' || key === 'end') && stringValue.includes('T')) {
+            stringValue = stringValue.split('T')[0]!;
+          }
+        }
         url.searchParams.append(key, stringValue);
       }
     });

@@ -1,6 +1,46 @@
-version: '3.8'
-
 services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: dashboard-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://dashboard:dashboard@mysql:3306/dashboard
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: http://localhost:8080,http://localhost:5173
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    networks:
+      - dashboard-network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
+    container_name: dashboard-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      VITE_API_URL: http://localhost:3000
+      VITE_APP_ENV: production
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "8080:80"
+    networks:
+      - dashboard-network
+
   mysql:
     image: mysql:8.0.35
     container_name: dashboard-mysql
@@ -62,10 +102,12 @@ services:
       PMA_PASSWORD: root
       UPLOAD_LIMIT: 50M
     ports:
-      - "8080:80"
+      - "8082:80"
     depends_on:
       mysql:
         condition: service_healthy
+      api:
+        condition: service_started
     networks:
       - dashboard-network
 
@@ -92,6 +134,3 @@ volumes:
 networks:
   dashboard-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
