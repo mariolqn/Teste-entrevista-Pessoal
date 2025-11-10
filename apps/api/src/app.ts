@@ -83,14 +83,17 @@ export async function buildApp(): Promise<FastifyInstance> {
     crossOriginEmbedderPolicy: false,
   });
 
-  // Rate limiting
-  if (config.featureRateLimitEnabled) {
+  // Rate limiting - disabled in test mode
+  if (config.featureRateLimitEnabled && config.env !== 'test') {
+    const { getRedisInstance } = await import('./lib/redis');
+    const redisInstance = config.featureCacheEnabled ? getRedisInstance() : undefined;
+    
     await app.register(rateLimit, {
       max: config.rateLimitMax,
       timeWindow: config.rateLimitWindow,
       cache: 10_000,
       allowList: ['127.0.0.1', '::1'], // Whitelist localhost
-      redis: config.featureCacheEnabled ? (await import('./lib/redis')).redis : undefined,
+      redis: redisInstance,
       keyGenerator: (request) => {
         return `${request.ip}:${request.routerPath}`;
       },

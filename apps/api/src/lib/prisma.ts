@@ -18,7 +18,8 @@ const prismaClientSingleton = () =>
     ],
     datasources: {
       db: {
-        url: config.databaseUrl,
+        // Use current DATABASE_URL if available, fallback to config
+        url: process.env['DATABASE_URL'] || config.databaseUrl,
       },
     },
   });
@@ -115,7 +116,6 @@ export async function checkDatabaseHealth(): Promise<boolean> {
     return false;
   }
 }
-
 if (config.env !== 'production') globalThis.prisma = prisma;
 
 export default prisma;

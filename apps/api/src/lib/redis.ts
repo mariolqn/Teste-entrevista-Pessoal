@@ -47,8 +47,24 @@ const createRedisClient = () => {
   return client;
 };
 
-// Create singleton instance
-export const redis = createRedisClient();
+// Create singleton instance lazily
+let _redisInstance: Redis | null = null;
+
+export function getRedisInstance(): Redis | null {
+  // In test mode, always return null to avoid Redis connection attempts
+  if (process.env['NODE_ENV'] === 'test' || !config.featureCacheEnabled) {
+    return null;
+  }
+  
+  if (!_redisInstance) {
+    _redisInstance = createRedisClient();
+  }
+  
+  return _redisInstance;
+}
+
+// Export singleton - null in test mode to avoid connection attempts
+export const redis = process.env['NODE_ENV'] === 'test' ? null : getRedisInstance();
 
 // Cache utilities
 export class CacheService {
@@ -62,8 +78,13 @@ export class CacheService {
    * Get value from cache
    */
   async get<T>(key: string): Promise<T | null> {
+    const redisClient = getRedisInstance();
+    if (!redisClient) {
+      return null; // Return null when caching is disabled
+    }
+    
     try {
-      const value = await redis.get(this.prefix + key);
+      const value = await redisClient.get(this.prefix + key);
       if (!value) {
         return null;
       }
@@ -78,11 +99,16 @@ export class CacheService {
    * Set value in cache with TTL
    */
   async set<T>(key: string, value: T, ttl: number = config.redisTtl): Promise<boolean> {
+    const redisClient = getRedisInstance();
+    if (!redisClient) {
+      return true; // Return success when caching is disabled
+    }
+    
     try {
       const serialized = JSON.stringify(value);
       await (ttl > 0
-        ? redis.setex(this.prefix + key, ttl, serialized)
-        : redis.set(this.prefix + key, serialized));
+        ? redisClient.setex(this.prefix + key, ttl, serialized)
+        : redisClient.set(this.prefix + key, serialized));
       return true;
     } catch (error) {
       logger.error({ err: error, key }, 'Cache set error');
@@ -94,8 +120,13 @@ export class CacheService {
    * Delete value from cache
    */
   async del(key: string): Promise<boolean> {
+    const redisClient = getRedisInstance();
+    if (!redisClient) {
+      return true; // Return success when caching is disabled
+    }
+    
     try {
-      const result = await redis.del(this.prefix + key);
+      const result = await redisClient.del(this.prefix + key);
       return result === 1;
     } catch (error) {
       logger.error({ err: error, key }, 'Cache delete error');
@@ -107,13 +138,18 @@ export class CacheService {
    * Delete multiple keys by pattern
    */
   async delByPattern(pattern: string): Promise<number> {
+    const redisClient = getRedisInstance();
+    if (!redisClient) {
+      return 0; // Return 0 when caching is disabled
+    }
+    
     try {
-      const keys = await redis.keys(this.prefix + pattern);
+      const keys = await redisClient.keys(this.prefix + pattern);
       if (keys.length === 0) {
         return 0;
       }
 
-      const pipeline = redis.pipeline();
+      const pipeline = redisClient.pipeline();
       keys.forEach((key) => pipeline.del(key));
       await pipeline.exec();
 
@@ -128,8 +164,13 @@ export class CacheService {
    * Check if key exists
    */
   async exists(key: string): Promise<boolean> {
+    const redisClient = getRedisInstance();
+    if (!redisClient) {
+      return false; // Return false when caching is disabled
+    }
+    
     try {
-      const result = await redis.exists(this.prefix + key);
+      const result = await redisClient.exists(this.prefix + key);
       return result === 1;
     } catch (error) {
       logger.error({ err: error, key }, 'Cache exists check error');
@@ -166,10 +207,15 @@ export class CacheService {
    * Flush all cache
    */
   async flush(): Promise<boolean> {
+    const redisClient = getRedisInstance();
+    if (!redisClient) {
+      return true; // Return success when caching is disabled
+    }
+    
     try {
-      const keys = await redis.keys(`${this.prefix}*`);
+      const keys = await redisClient.keys(`${this.prefix}*`);
       if (keys.length > 0) {
-        const pipeline = redis.pipeline();
+        const pipeline = redisClient.pipeline();
         keys.forEach((key) => pipeline.del(key));
         await pipeline.exec();
       }
@@ -187,13 +233,18 @@ export const cacheService = new CacheService(config.redisKeyPrefix);
 
 // Connection management
 export async function connectRedis(): Promise<void> {
-  if (!config.featureCacheEnabled) {
+  if (process.env['NODE_ENV'] === 'test' || !config.featureCacheEnabled) {
     logger.info('⏭️  Redis caching is disabled');
     return;
   }
 
+  const redisClient = getRedisInstance();
+  if (!redisClient) {
+    return;
+  }
+
   try {
-    await redis.connect();
+    await redisClient.connect();
   } catch (error) {
     logger.error({ err: error }, '❌ Failed to connect to Redis');
     // Don't throw - Redis is optional for the app to work
@@ -204,8 +255,13 @@ export async function connectRedis(): Promise<void> {
 }
 
 export async function disconnectRedis(): Promise<void> {
+  const redisClient = getRedisInstance();
+  if (!redisClient) {
+    return;
+  }
+  
   try {
-    await redis.quit();
+    await redisClient.quit();
   } catch (error) {
     logger.error({ err: error }, '❌ Error disconnecting from Redis');
   }
@@ -213,8 +269,13 @@ export async function disconnectRedis(): Promise<void> {
 
 // Health check
 export async function checkRedisHealth(): Promise<boolean> {
+  const redisClient = getRedisInstance();
+  if (!redisClient) {
+    return false; // Report as unhealthy when disabled
+  }
+  
   try {
-    const result = await redis.ping();
+    const result = await redisClient.ping();
     return typeof result === 'string' && result.toUpperCase() === 'PONG';
   } catch {
     return false;
