@@ -315,7 +315,3 @@ GitHub Actions workflow `.github/workflows/ci.yml` executes on PRs & `main`:
 ## License
 
 Licensed under the MIT License.
-
-## Acknowledgements
-
-Built as an enterprise-grade dashboard reference implementation with love for robust, type-safe systems.
