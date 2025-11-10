@@ -147,11 +147,13 @@ export class BarChartStrategy extends BaseChartStrategy {
       product: 't.product_id',
       customer: 't.customer_id',
       region: 'cu.region',
+      day: "DATE_FORMAT(t.occurred_at, '%Y-%m-%d')",
+      week: "CONCAT(YEAR(t.occurred_at), '-W', LPAD(WEEK(t.occurred_at, 3), 2, '0'))",
       month: "DATE_FORMAT(t.occurred_at, '%Y-%m')",
       quarter: "CONCAT(YEAR(t.occurred_at), '-Q', QUARTER(t.occurred_at))",
       year: 'YEAR(t.occurred_at)',
     };
-    return fields[groupBy] || 't.category_id';
+    return fields[groupBy] || "DATE_FORMAT(t.occurred_at, '%Y-%m-%d')";
   }
 
   /**
@@ -196,11 +198,13 @@ export class BarChartStrategy extends BaseChartStrategy {
       product: 'p.name',
       customer: 'cu.name',
       region: 'cu.region',
+      day: "DATE_FORMAT(t.occurred_at, '%Y-%m-%d')",
+      week: "CONCAT(YEAR(t.occurred_at), '-W', LPAD(WEEK(t.occurred_at, 3), 2, '0'))",
       month: "DATE_FORMAT(t.occurred_at, '%Y-%m')",
       quarter: "CONCAT(YEAR(t.occurred_at), '-Q', QUARTER(t.occurred_at))",
       year: 'YEAR(t.occurred_at)',
     };
-    return fields[groupBy] || 'c.name';
+    return fields[groupBy] || "DATE_FORMAT(t.occurred_at, '%Y-%m-%d')";
   }
 
   /**

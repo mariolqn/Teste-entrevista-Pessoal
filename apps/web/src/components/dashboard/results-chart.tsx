@@ -2,12 +2,16 @@
  * Results Chart Component - Connected to global state
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { TrendingUp, BarChart3, LineChart, PieChart } from 'lucide-react';
 
-import type { LineChartResponse } from '@dashboard/types';
+import type { BarChartResponse, LineChartResponse, PieChartResponse } from '@dashboard/types';
 
-import { LineChart as LineChartComponent } from '@/components/charts';
+import {
+  LineChart as LineChartComponent,
+  BarChart as BarChartComponent,
+  PieChart as PieChartComponent,
+} from '@/components/charts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useChartData } from '@/hooks/use-chart-data';
 import { useChartAPIParams } from '@/stores/dashboard-store';
@@ -87,6 +91,27 @@ export function ResultsChart() {
   const [chartType, setChartType] = useState<'line' | 'bar' | 'pie'>('line');
   const apiParams = useChartAPIParams();
 
+  const chartConfig = useMemo(() => {
+    switch (chartType) {
+      case 'bar':
+        return {
+          groupBy: 'category' as const,
+          dimension: 'type',
+          topN: 10,
+        };
+      case 'pie':
+        return {
+          groupBy: 'category' as const,
+          topN: 10,
+        };
+      case 'line':
+      default:
+        return {
+          groupBy: 'day' as const,
+        };
+    }
+  }, [chartType]);
+
   const {
     data,
     isLoading,
@@ -96,7 +121,7 @@ export function ResultsChart() {
   } = useChartData(chartType, {
     ...apiParams,
     metric: 'revenue',
-    groupBy: 'day',
+    ...chartConfig,
   });
 
   // Calculate time since last update
@@ -176,18 +201,21 @@ export function ResultsChart() {
           />
         )}
 
-        {/* Placeholder for other chart types */}
-        {data && !isLoading && !error && chartType !== 'line' && (
-          <div className="flex h-80 items-center justify-center">
-            <div className="text-center">
-              <p className="text-sm font-medium text-slate-600">
-                Gráfico de {CHART_TYPES.find(t => t.key === chartType)?.label}
-              </p>
-              <p className="text-xs text-slate-500">
-                Em desenvolvimento
-              </p>
-            </div>
-          </div>
+        {data && !isLoading && !error && chartType === 'bar' && 'categories' in data && Array.isArray((data as BarChartResponse).categories) && (
+          <BarChartComponent
+            data={data as BarChartResponse}
+            height={320}
+            layout="vertical"
+          />
+        )}
+
+        {data && !isLoading && !error && chartType === 'pie' && 'series' in data && Array.isArray((data as PieChartResponse).series) && (
+          <PieChartComponent
+            data={data as PieChartResponse}
+            height={320}
+            innerRadius={80}
+            showPercentage
+          />
         )}
         
         {!data && !isLoading && !error && (
